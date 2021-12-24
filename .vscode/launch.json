@@ -1,0 +1,51 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "command": "cargo run",
+            "name": "cargo run",
+            "request": "launch",
+            "type": "node-terminal"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'rustwiki'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=rustwiki",
+                    "--package=rustwiki"
+                ],
+                "filter": {
+                    "name": "rustwiki",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'rustwiki'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=rustwiki",
+                    "--package=rustwiki"
+                ],
+                "filter": {
+                    "name": "rustwiki",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}
