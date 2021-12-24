@@ -9,3 +9,4 @@ edition = "2021"
 pulldown-cmark = { version = "0.9", default-features = false }
 tokio = { version = "1", features = ["full"] }
 hyper = { version = "0.14", features = ["full"] }
+pretty_env_logger = "0.4"

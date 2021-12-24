@@ -27,7 +27,7 @@ async fn hello(_: Request<Body>) -> Result<Response<Body>, Infallible> {
 
 #[tokio::main]
 pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    // pretty_env_logger::init();
+    pretty_env_logger::init();
 
     // For every connection, we must make a `Service` to handle all
     // incoming HTTP requests on said connection.
