@@ -7,4 +7,5 @@ edition = "2021"
 
 [dependencies]
 pulldown-cmark = { version = "0.9", default-features = false }
-
+tokio = { version = "1", features = ["full"] }
+hyper = { version = "0.14", features = ["full"] }
