@@ -1,36 +1,118 @@
 use std::convert::Infallible;
+use std::error::Error;
+use std::fmt;
+use std::fs::File;
+use std::io::Read;
+use std::path::{Path, PathBuf};
 
-use log::{info, trace, warn};
+use log::info;
 
+use hyper::header;
 use hyper::service::{make_service_fn, service_fn};
-use hyper::{Body, Request, Response, Server};
+use hyper::{Body, Request, Response, Server, StatusCode};
 
 use pulldown_cmark::{html, Options, Parser};
 
-
 // TODO: make configurable
-static ROOT: &str = "/home/austin/rustwiki/";
+static ROOT: &str = "/workspaces/rustwiki/test_site/";
 
-fn md() -> String {
-    let markdown_input = "Hello world, this is a ~~complicated~~ *very simple* example.";
+#[derive(Debug)]
+enum MyError {
+    BadPath,
+    UnknownFilePath,
+}
+
+impl fmt::Display for MyError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            MyError::BadPath => write!(f, "bad path"),
+            MyError::UnknownFilePath => write!(f, "unknown file type"),
+        }
+    }
+}
+
+impl Error for MyError {}
+
+fn markdown_response(file: &mut File) -> Result<Response<Body>, Box<dyn std::error::Error>> {
+    let mut markdown_input = String::new();
+    file.read_to_string(&mut markdown_input)?;
 
     // Set up options and parser. Strikethroughs are not part of the CommonMark standard
     // and we therefore must enable it explicitly.
     let mut options = Options::empty();
     options.insert(Options::ENABLE_STRIKETHROUGH);
-    let parser = Parser::new_ext(markdown_input, options);
+    let parser = Parser::new_ext(&markdown_input, options);
 
     // Write to String buffer.
     let mut html_output = String::new();
     html::push_html(&mut html_output, parser);
 
-    html_output
+    Ok(Response::builder()
+        .status(StatusCode::OK)
+        .header(header::CONTENT_TYPE, "text/html")
+        .body(Body::from(html_output))?)
+}
+
+async fn process_file_request(
+    path_buf: &Path,
+    file: &mut File,
+) -> Result<Response<Body>, Box<dyn std::error::Error>> {
+    let ext = match path_buf.extension() {
+        None => return Err(Box::new(MyError::BadPath)),
+        Some(ext) => ext,
+    };
+
+    let ext = match ext.to_str() {
+        None => return Err(Box::new(MyError::BadPath)),
+        Some(ext) => ext,
+    };
+
+    info!("f: {:?} ext: {}", path_buf, ext);
+
+    match ext {
+        "md" => markdown_response(file),
+        _ => Err(Box::new(MyError::UnknownFilePath)),
+    }
+}
+
+async fn process_request_inner(
+    req: &Request<Body>,
+) -> Result<Response<Body>, Box<dyn std::error::Error>> {
+    let file_path = req.uri().path();
+    info!("start request: {}", file_path);
+    // TODO: Figure out if there is any reason we would not get a slash.
+    //       Convert to a 404 or 500 error if so.
+    assert!(!file_path.is_empty() && &file_path[0..1] == "/");
+
+    let mut path_buf = PathBuf::from(ROOT);
+    path_buf.push(&file_path[1..]);
+
+    let path_buf = path_buf.canonicalize()?;
+    info!("canonicalized path: {:?}", path_buf);
+
+    if !path_buf.starts_with(ROOT) {
+        return Ok(Response::builder()
+            .status(StatusCode::NOT_FOUND)
+            .body(Body::from("Path traversal attack."))?);
+    }
+
+    // TODO: handle directories. Maybe redirect to README.md or show automatically?
+    match File::open(&path_buf) {
+        Ok(mut f) => process_file_request(&path_buf, &mut f).await,
+        Err(_) => Ok(Response::builder()
+            .status(StatusCode::NOT_FOUND)
+            .body(Body::from("File not found."))?),
+    }
 }
 
 async fn process_request(req: Request<Body>) -> Result<Response<Body>, Infallible> {
-    let file_path = req.uri().path();
-    info!("path: {}", file_path);
-    Ok(Response::new(Body::from(md())))
+    match process_request_inner(&req).await {
+        Ok(res) => Ok(res),
+        Err(_) => Ok(Response::builder()
+            .status(StatusCode::INTERNAL_SERVER_ERROR)
+            .body(Body::from("Something went wrong"))
+            .unwrap()),
+    }
 }
 
 #[tokio::main]
