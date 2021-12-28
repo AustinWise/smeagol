@@ -1,9 +1,9 @@
 use std::convert::Infallible;
-use std::error::Error;
-use std::fmt;
 use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
+
+use thiserror::Error;
 
 use log::info;
 
@@ -16,24 +16,25 @@ use pulldown_cmark::{html, Options, Parser};
 // TODO: make configurable
 static ROOT: &str = "/workspaces/rustwiki/test_site/";
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 enum MyError {
+    #[error("bad path")]
     BadPath,
+    #[error("unknown file path")]
     UnknownFilePath,
+    #[error("io error")]
+    Io {
+        #[from]
+        source: std::io::Error,
+    },
+    #[error("http error")]
+    Http {
+        #[from]
+        source: hyper::http::Error,
+    },
 }
 
-impl fmt::Display for MyError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            MyError::BadPath => write!(f, "bad path"),
-            MyError::UnknownFilePath => write!(f, "unknown file type"),
-        }
-    }
-}
-
-impl Error for MyError {}
-
-fn markdown_response(file: &mut File) -> Result<Response<Body>, Box<dyn std::error::Error>> {
+fn markdown_response(file: &mut File) -> Result<Response<Body>, MyError> {
     let mut markdown_input = String::new();
     file.read_to_string(&mut markdown_input)?;
 
@@ -56,14 +57,14 @@ fn markdown_response(file: &mut File) -> Result<Response<Body>, Box<dyn std::err
 async fn process_file_request(
     path_buf: &Path,
     file: &mut File,
-) -> Result<Response<Body>, Box<dyn std::error::Error>> {
+) -> Result<Response<Body>, MyError> {
     let ext = match path_buf.extension() {
-        None => return Err(Box::new(MyError::BadPath)),
+        None => return Err(MyError::BadPath),
         Some(ext) => ext,
     };
 
     let ext = match ext.to_str() {
-        None => return Err(Box::new(MyError::BadPath)),
+        None => return Err(MyError::BadPath),
         Some(ext) => ext,
     };
 
@@ -71,13 +72,13 @@ async fn process_file_request(
 
     match ext {
         "md" => markdown_response(file),
-        _ => Err(Box::new(MyError::UnknownFilePath)),
+        _ => Err(MyError::UnknownFilePath),
     }
 }
 
 async fn process_request_inner(
     req: &Request<Body>,
-) -> Result<Response<Body>, Box<dyn std::error::Error>> {
+) -> Result<Response<Body>, MyError> {
     let file_path = req.uri().path();
     info!("start request: {}", file_path);
     // TODO: Figure out if there is any reason we would not get a slash.
@@ -108,9 +109,10 @@ async fn process_request_inner(
 async fn process_request(req: Request<Body>) -> Result<Response<Body>, Infallible> {
     match process_request_inner(&req).await {
         Ok(res) => Ok(res),
-        Err(_) => Ok(Response::builder()
+        Err(err) => Ok(Response::builder()
             .status(StatusCode::INTERNAL_SERVER_ERROR)
-            .body(Body::from("Something went wrong"))
+            .header(header::CONTENT_TYPE, "text/plain")
+            .body(Body::from(format!("Something went wrong: {:?}", err)))
             .unwrap()),
     }
 }
