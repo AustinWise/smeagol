@@ -13,8 +13,11 @@ use hyper::{Body, Request, Response, Server, StatusCode};
 
 use pulldown_cmark::{html, Options, Parser};
 
-// TODO: make configurable
-static ROOT: &str = "/workspaces/rustwiki/test_site/";
+// TODO: Make configurable.
+// Note that `canonicalize()` should be called on any user-defined root path.
+// Especially for Windows paths, the normalization can change them in ways
+// not expected.
+static ROOT: &str = "\\\\?\\D:\\src\\rustwiki\\test_site\\";
 
 #[derive(Error, Debug)]
 enum MyError {
@@ -92,6 +95,10 @@ async fn process_request_inner(
     info!("canonicalized path: {:?}", path_buf);
 
     if !path_buf.starts_with(ROOT) {
+        // TODO: Stronger resistance against path traversal attacks.
+        // We are checking paths here, but ideally the operating system would
+        // also have our back. Something like OpenBSD's `pledge(2)` could
+        // prevent us from accessing files we did not intend to access.
         return Ok(Response::builder()
             .status(StatusCode::NOT_FOUND)
             .body(Body::from("Path traversal attack."))?);
