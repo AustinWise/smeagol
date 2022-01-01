@@ -18,6 +18,21 @@ Phrased in another way, the goal of this project is to create something roughly
 like [Gollum](https://github.com/gollum/gollum), but does not take half an hour
 to `gem install` on a low-powered Chromebook.
 
+## TODO
+
+An incomplete list:
+
+* CI/CD, to deliver on the promise of being faster to install than Gollum.
+* Put some chrome around the rendered markdown pages.
+* Also get some nice RSS.
+* Maybe a list of files when viewing directories, like GitHub does
+* Editing support
+* Some crate with mime types, so I don't have to hard code everything myself
+  for pictures and other media.
+* Figure out how compatible with Gollum we should be.
+* Eventually figure out an API. Consider the possibility of being a drop-in
+  replacement for Gollum, if that makes sense.
+
 ## Why Rust, please tell me more about why you love Rust
 
 Rust makes it easy to ship compiled executables that run without much fuss.
