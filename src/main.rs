@@ -2,6 +2,9 @@ use std::convert::Infallible;
 use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
+
+use clap::Parser;
 
 use thiserror::Error;
 
@@ -11,13 +14,7 @@ use hyper::header;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Request, Response, Server, StatusCode};
 
-use pulldown_cmark::{html, Options, Parser};
-
-// TODO: Make configurable.
-// Note that `canonicalize()` should be called on any user-defined root path.
-// Especially for Windows paths, the normalization can change them in ways
-// not expected.
-static ROOT: &str = "\\\\?\\D:\\src\\rustwiki\\test_site\\";
+use pulldown_cmark::{html, Options};
 
 #[derive(Error, Debug)]
 enum MyError {
@@ -37,6 +34,24 @@ enum MyError {
     },
 }
 
+#[derive(clap::Parser, Debug, Clone)]
+#[clap(about, version, author)]
+struct ArgsImp {
+    /// Name of the person to greet
+    #[clap(parse(from_os_str))]
+    git_repo: PathBuf,
+}
+
+// TODO: figure out if we really need this arc and mutex stuff
+#[derive(Debug, Clone)]
+struct Args(Arc<Mutex<ArgsImp>>);
+
+impl Args {
+    fn git_repo(&self) -> PathBuf {
+        self.0.lock().unwrap().git_repo.clone()
+    }
+}
+
 fn markdown_response(file: &mut File) -> Result<Response<Body>, MyError> {
     let mut markdown_input = String::new();
     file.read_to_string(&mut markdown_input)?;
@@ -45,7 +60,7 @@ fn markdown_response(file: &mut File) -> Result<Response<Body>, MyError> {
     // and we therefore must enable it explicitly.
     let mut options = Options::empty();
     options.insert(Options::ENABLE_STRIKETHROUGH);
-    let parser = Parser::new_ext(&markdown_input, options);
+    let parser = pulldown_cmark::Parser::new_ext(&markdown_input, options);
 
     // Write to String buffer.
     let mut html_output = String::new();
@@ -57,10 +72,7 @@ fn markdown_response(file: &mut File) -> Result<Response<Body>, MyError> {
         .body(Body::from(html_output))?)
 }
 
-async fn process_file_request(
-    path_buf: &Path,
-    file: &mut File,
-) -> Result<Response<Body>, MyError> {
+async fn process_file_request(path_buf: &Path, file: &mut File) -> Result<Response<Body>, MyError> {
     let ext = match path_buf.extension() {
         None => return Err(MyError::BadPath),
         Some(ext) => ext,
@@ -80,6 +92,7 @@ async fn process_file_request(
 }
 
 async fn process_request_inner(
+    args: &Args,
     req: &Request<Body>,
 ) -> Result<Response<Body>, MyError> {
     let file_path = req.uri().path();
@@ -88,13 +101,13 @@ async fn process_request_inner(
     //       Convert to a 404 or 500 error if so.
     assert!(!file_path.is_empty() && &file_path[0..1] == "/");
 
-    let mut path_buf = PathBuf::from(ROOT);
+    let mut path_buf = args.git_repo();
     path_buf.push(&file_path[1..]);
 
     let path_buf = path_buf.canonicalize()?;
     info!("canonicalized path: {:?}", path_buf);
 
-    if !path_buf.starts_with(ROOT) {
+    if !path_buf.starts_with(args.git_repo()) {
         // TODO: Stronger resistance against path traversal attacks.
         // We are checking paths here, but ideally the operating system would
         // also have our back. Something like OpenBSD's `pledge(2)` could
@@ -113,8 +126,8 @@ async fn process_request_inner(
     }
 }
 
-async fn process_request(req: Request<Body>) -> Result<Response<Body>, Infallible> {
-    match process_request_inner(&req).await {
+async fn process_request(args: Args, req: Request<Body>) -> Result<Response<Body>, Infallible> {
+    match process_request_inner(&args, &req).await {
         Ok(res) => Ok(res),
         Err(err) => Ok(Response::builder()
             .status(StatusCode::INTERNAL_SERVER_ERROR)
@@ -124,17 +137,15 @@ async fn process_request(req: Request<Body>) -> Result<Response<Body>, Infallibl
     }
 }
 
-#[tokio::main]
-pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    pretty_env_logger::init();
-
+async fn run_server(args: Args) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // For every connection, we must make a `Service` to handle all
     // incoming HTTP requests on said connection.
     let make_svc = make_service_fn(|_conn| {
         // This is the `Service` that will handle the connection.
         // `service_fn` is a helper to convert a function that
         // returns a Response into a `Service`.
-        async { Ok::<_, Infallible>(service_fn(process_request)) }
+        let args = args.clone();
+        async { Ok::<_, Infallible>(service_fn(move |req| process_request(args.clone(), req))) }
     });
 
     let addr = ([127, 0, 0, 1], 3000).into();
@@ -144,6 +155,25 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     println!("Listening on http://{}", addr);
 
     server.await?;
+
+    Ok(())
+}
+
+fn parse_args() -> Args {
+    let mut args = ArgsImp::parse();
+    args.git_repo = std::fs::canonicalize(args.git_repo)
+        .expect("Git repo does not exist, check the path provided.");
+    info!("canonicalize git repo dir: {:?}", args.git_repo);
+    Args(Arc::from(Mutex::from(args)))
+}
+
+#[tokio::main]
+pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pretty_env_logger::init();
+
+    let args = parse_args();
+
+    run_server(args).await?;
 
     Ok(())
 }
