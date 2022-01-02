@@ -6,11 +6,17 @@ use hyper::Server;
 mod args;
 mod requests;
 mod error;
+mod templates;
 
 use args::Args;
 use requests::process_request;
 
-async fn run_server(args: Args) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+#[tokio::main]
+pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pretty_env_logger::init();
+
+    let args = Args::parse();
+
     // For every connection, we must make a `Service` to handle all
     // incoming HTTP requests on said connection.
     let make_svc = make_service_fn(|_conn| {
@@ -28,16 +34,6 @@ async fn run_server(args: Args) -> Result<(), Box<dyn std::error::Error + Send +
     println!("Listening on http://{}", addr);
 
     server.await?;
-
-    Ok(())
-}
-#[tokio::main]
-pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    pretty_env_logger::init();
-
-    let args = Args::parse();
-
-    run_server(args).await?;
 
     Ok(())
 }

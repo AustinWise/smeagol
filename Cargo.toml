@@ -13,3 +13,4 @@ pretty_env_logger = "0.4"
 log = "0.4"
 thiserror = "1.0"
 clap = { version = "3.0.0", features = ["derive"] }
+askama = "0.11"

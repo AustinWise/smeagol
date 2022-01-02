@@ -32,6 +32,12 @@ An incomplete list:
 * Figure out how compatible with Gollum we should be.
 * Eventually figure out an API. Consider the possibility of being a drop-in
   replacement for Gollum, if that makes sense.
+* If the sites hosted by this are ever to be exposed to the public, consider
+  security issues:
+  * Path traversal
+  * XSS in wiki page contents and other places.
+  * CSRF
+  * Sandboxing, using things like Capsicum or `pledge(2)`.
 
 ## Why Rust, please tell me more about why you love Rust
 

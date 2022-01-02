@@ -12,8 +12,9 @@ use pulldown_cmark::{html, Options};
 
 use crate::args::Args;
 use crate::error::MyError;
+use crate::templates::render_page;
 
-fn markdown_response(file: &mut File) -> Result<Response<Body>, MyError> {
+fn markdown_response(file_name: &str, file: &mut File) -> Result<Response<Body>, MyError> {
     let mut markdown_input = String::new();
     file.read_to_string(&mut markdown_input)?;
 
@@ -24,8 +25,10 @@ fn markdown_response(file: &mut File) -> Result<Response<Body>, MyError> {
     let parser = pulldown_cmark::Parser::new_ext(&markdown_input, options);
 
     // Write to String buffer.
-    let mut html_output = String::new();
-    html::push_html(&mut html_output, parser);
+    let mut rendered_markdown = String::new();
+    html::push_html(&mut rendered_markdown, parser);
+
+    let html_output = render_page(file_name, &rendered_markdown)?;
 
     Ok(Response::builder()
         .status(StatusCode::OK)
@@ -47,7 +50,8 @@ async fn process_file_request(path_buf: &Path, file: &mut File) -> Result<Respon
     info!("f: {:?} ext: {}", path_buf, ext);
 
     match ext {
-        "md" => markdown_response(file),
+        // TODO: consider when these could fail and handle if needed.
+        "md" => markdown_response(path_buf.file_name().unwrap().to_str().unwrap(), file),
         _ => Err(MyError::UnknownFilePath),
     }
 }
@@ -62,13 +66,15 @@ async fn process_request_worker(
     //       Convert to a 404 or 500 error if so.
     assert!(!file_path.is_empty() && &file_path[0..1] == "/");
 
-    let mut path_buf = args.git_repo();
+    let git_repo = args.git_repo();
+
+    let mut path_buf = git_repo.clone();
     path_buf.push(&file_path[1..]);
 
     let path_buf = path_buf.canonicalize()?;
     info!("canonicalized path: {:?}", path_buf);
 
-    if !path_buf.starts_with(args.git_repo()) {
+    if !path_buf.starts_with(&git_repo) {
         // TODO: Stronger resistance against path traversal attacks.
         // We are checking paths here, but ideally the operating system would
         // also have our back. Something like OpenBSD's `pledge(2)` could

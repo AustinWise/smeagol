@@ -16,4 +16,9 @@ pub enum MyError {
         #[from]
         source: hyper::http::Error,
     },
+    #[error("template error")]
+    TemplateError {
+        #[from]
+        source: askama::Error,
+    }
 }
