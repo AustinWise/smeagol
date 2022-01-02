@@ -38,6 +38,10 @@ An incomplete list:
   * XSS in wiki page contents and other places.
   * CSRF
   * Sandboxing, using things like Capsicum or `pledge(2)`.
+* Consider performance. Specifically the page responses are currently rendered
+  into a String. Memory usage and copying could be reduced by writing directly
+  into the HTTP connection. The templating library and markdown already support
+  the `std::io::Write` trait.
 
 ## Why Rust, please tell me more about why you love Rust
 

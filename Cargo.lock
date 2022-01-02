@@ -381,6 +381,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "once_cell"
+version = "1.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "da32515d9f6e6e489d7bc9d84c71b060db7247dc035bbe44eac88cf87486d8d5"
+
+[[package]]
 name = "os_str_bytes"
 version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -528,6 +534,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "signal-hook-registry"
+version = "1.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e51e73328dc4ac0c7ccbda3a494dfa03df1de2f46018127f60c693f2648455b0"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "socket2"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -598,7 +613,9 @@ dependencies = [
  "libc",
  "mio",
  "num_cpus",
+ "once_cell",
  "pin-project-lite",
+ "signal-hook-registry",
  "tokio-macros",
  "winapi",
 ]

@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 pulldown-cmark = { version = "0.9", default-features = false }
-tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal"] }
 hyper = { version = "0.14", features = ["server", "runtime", "http1"] }
 pretty_env_logger = "0.4"
 log = "0.4"

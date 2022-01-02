@@ -11,6 +11,14 @@ mod templates;
 use args::Args;
 use requests::process_request;
 
+async fn shutdown_signal() {
+    // Wait for the CTRL+C signal
+    tokio::signal::ctrl_c()
+        .await
+        .expect("failed to install CTRL+C signal handler");
+    println!("got ctrl+c");
+}
+
 #[tokio::main]
 pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     pretty_env_logger::init();
@@ -29,7 +37,7 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     let addr = ([127, 0, 0, 1], 3000).into();
 
-    let server = Server::bind(&addr).serve(make_svc);
+    let server = Server::bind(&addr).serve(make_svc).with_graceful_shutdown(shutdown_signal());
 
     println!("Listening on http://{}", addr);
 
