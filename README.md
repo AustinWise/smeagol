@@ -42,6 +42,10 @@ An incomplete list:
   into a String. Memory usage and copying could be reduced by writing directly
   into the HTTP connection. The templating library and markdown already support
   the `std::io::Write` trait.
+* Some sort of filesystem abstraction. Currently we read directly from the
+  filesystem, but Gollum can read directly from bare Git repos. It would be nice
+  to support both.
+* Consider a fancier web app framework than Hyper.
 
 ## Why Rust, please tell me more about why you love Rust
 
