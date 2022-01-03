@@ -4,16 +4,18 @@
 <head>
     <title>rustwiki - {{title}}</title>
     <!-- TODO: embed css file into the program -->
-    <link href="https://unpkg.com/@primer/css@^16.0.0/dist/primer.css" rel="stylesheet" />
+    <link href="https://unpkg.com/@primer/css@^19.1.1/dist/primer.css" rel="stylesheet" />
 </head>
 
-<body>
+<body class="container-lg">
     <header>
 
     </header>
     <main>
         <h1>{{title}}</h1>
-        {{content}}
+        <dic class="markdown-body">
+            {{content}}
+        </dic>
     </main>
 
 </body>

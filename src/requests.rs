@@ -71,7 +71,7 @@ async fn process_request_worker(
     let mut path_buf = git_repo.clone();
     path_buf.push(&file_path[1..]);
 
-    let path_buf = path_buf.canonicalize()?;
+    path_buf = path_buf.canonicalize()?;
     info!("canonicalized path: {:?}", path_buf);
 
     if !path_buf.starts_with(&git_repo) {
@@ -84,12 +84,20 @@ async fn process_request_worker(
             .body(Body::from("Path traversal attack."))?);
     }
 
+    if path_buf.is_dir() {
+        info!(
+            "Path '{:?}' appears to be a directory, appending README.md",
+            path_buf
+        );
+        path_buf.push("README.md");
+    }
+
     // TODO: handle directories. Maybe redirect to README.md or show automatically?
     match File::open(&path_buf) {
         Ok(mut f) => process_file_request(&path_buf, &mut f).await,
         Err(_) => Ok(Response::builder()
             .status(StatusCode::NOT_FOUND)
-            .body(Body::from("File not found."))?),
+            .body(Body::from(format!("File not found: {:?}", path_buf)))?),
     }
 }
 
