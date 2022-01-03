@@ -1,5 +1,5 @@
 
-# rust wiki (better name TBD)
+# Smeagol - locally hosted wiki
 
 The aspiration goal of this project is to create a wiki software with these
 properties:
@@ -12,7 +12,7 @@ properties:
 
 Non goals include:
 
-* Support for multiple users. This wiki is for your eyes only.
+* Support for multiple users.
 
 Phrased in another way, the goal of this project is to create something roughly
 like [Gollum](https://github.com/gollum/gollum), but does not take half an hour

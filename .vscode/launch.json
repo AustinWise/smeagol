@@ -13,15 +13,15 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'rustwiki'",
+            "name": "Debug executable 'smeagol'",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=rustwiki",
-                    "--package=rustwiki"
+                    "--bin=smeagol",
+                    "--package=smeagol"
                 ],
                 "filter": {
-                    "name": "rustwiki",
+                    "name": "smeagol",
                     "kind": "bin"
                 }
             },
@@ -31,16 +31,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'rustwiki'",
+            "name": "Debug unit tests in executable 'smeagol'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=rustwiki",
-                    "--package=rustwiki"
+                    "--bin=smeagol",
+                    "--package=smeagol"
                 ],
                 "filter": {
-                    "name": "rustwiki",
+                    "name": "smeagol",
                     "kind": "bin"
                 }
             },

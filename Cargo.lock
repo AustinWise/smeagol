@@ -500,20 +500,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f497285884f3fcff424ffc933e56d7cbca511def0c9831a7f9b5f6153e3cc89b"
 
 [[package]]
-name = "rustwiki"
-version = "0.1.0"
-dependencies = [
- "askama",
- "clap",
- "hyper",
- "log",
- "pretty_env_logger",
- "pulldown-cmark",
- "thiserror",
- "tokio",
-]
-
-[[package]]
 name = "serde"
 version = "1.0.132"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -540,6 +526,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e51e73328dc4ac0c7ccbda3a494dfa03df1de2f46018127f60c693f2648455b0"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "smeagol"
+version = "0.1.0"
+dependencies = [
+ "askama",
+ "clap",
+ "hyper",
+ "log",
+ "pretty_env_logger",
+ "pulldown-cmark",
+ "thiserror",
+ "tokio",
+ "toml",
 ]
 
 [[package]]
