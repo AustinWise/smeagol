@@ -87,15 +87,24 @@ async fn process_request_worker(
             "Path '{:?}' appears to be a directory, appending README.md",
             path_buf
         );
-        path_buf.push("README.md");
-    }
-
-    // TODO: handle directories. Maybe redirect to README.md or show automatically?
-    match File::open(&path_buf) {
-        Ok(mut f) => process_file_request(&path_buf, &mut f).await,
-        Err(_) => Ok(Response::builder()
-            .status(StatusCode::NOT_FOUND)
-            .body(Body::from(format!("File not found: {:?}", path_buf)))?),
+        let mut file_path = file_path.to_owned();
+        if !file_path.ends_with('/') {
+            file_path += "/";
+        }
+        file_path += settings.index_page();
+        file_path += ".md";
+        Ok(Response::builder()
+            .status(StatusCode::FOUND)
+            .header(header::LOCATION, file_path)
+            .body(Body::empty())?)
+    } else {
+        // TODO: handle directories. Maybe redirect to README.md or show automatically?
+        match File::open(&path_buf) {
+            Ok(mut f) => process_file_request(&path_buf, &mut f).await,
+            Err(_) => Ok(Response::builder()
+                .status(StatusCode::NOT_FOUND)
+                .body(Body::from(format!("File not found: {:?}", path_buf)))?),
+        }
     }
 }
 

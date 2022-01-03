@@ -1,7 +1,9 @@
+use std::default::Default;
 use std::fs::canonicalize;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use clap::Parser;
+use serde::Deserialize;
 
 use crate::error::MyError;
 
@@ -13,14 +15,33 @@ struct Args {
     git_repo: Option<PathBuf>,
 }
 
+#[derive(Default, Deserialize)]
+struct Config {
+    index_page: Option<String>,
+}
+
 #[derive(Debug, Clone)]
 pub struct Settings {
     git_repo: PathBuf,
+    index_page: String,
 }
 
 impl Settings {
     pub fn git_repo(&self) -> &PathBuf {
         &self.git_repo
+    }
+    pub fn index_page(&self) -> &str {
+        &self.index_page
+    }
+}
+
+fn load_config(git_repo: &Path) -> Result<Config, MyError> {
+    let mut config_path = git_repo.to_path_buf();
+    config_path.push("smeagol.toml");
+    if let Ok(config_str) = std::fs::read_to_string(config_path) {
+        Ok(toml::from_str(&config_str)?)
+    } else {
+        Ok(Default::default())
     }
 }
 
@@ -34,8 +55,15 @@ pub fn parse_settings_from_args() -> Result<Settings, MyError> {
     };
     let git_repo = canonicalize(git_repo)?;
 
+    if !git_repo.is_dir() {
+        return Err(MyError::GitRepoDoesNotExist);
+    }
+
+    let config = load_config(&git_repo)?;
+
     let ret = Settings {
         git_repo,
+        index_page: config.index_page.unwrap_or_else(|| "Home".into()),
     };
     Ok(ret)
 }

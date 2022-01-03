@@ -2,6 +2,8 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum MyError {
+    #[error("Git repo does not exist.")]
+    GitRepoDoesNotExist,
     #[error("bad path")]
     BadPath,
     #[error("unknown file path")]
@@ -20,5 +22,10 @@ pub enum MyError {
     TemplateError {
         #[from]
         source: askama::Error,
+    },
+    #[error("config file error")]
+    ConfigFileError {
+        #[from]
+        source: toml::de::Error,
     }
 }

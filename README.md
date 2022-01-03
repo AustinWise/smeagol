@@ -46,6 +46,7 @@ An incomplete list:
   filesystem, but Gollum can read directly from bare Git repos. It would be nice
   to support both.
 * Consider a fancier web app framework than Hyper.
+* Consider supporting markup formats other than Markdown.
 
 ## Why Rust, please tell me more about why you love Rust
 

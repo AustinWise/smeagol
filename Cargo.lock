@@ -538,6 +538,7 @@ dependencies = [
  "log",
  "pretty_env_logger",
  "pulldown-cmark",
+ "serde",
  "thiserror",
  "tokio",
  "toml",
