@@ -10,8 +10,8 @@ use hyper::{Body, Request, Response, StatusCode};
 
 use pulldown_cmark::{html, Options};
 
-use crate::args::Args;
 use crate::error::MyError;
+use crate::settings::Settings;
 use crate::templates::render_page;
 
 fn markdown_response(file_name: &str, file: &mut File) -> Result<Response<Body>, MyError> {
@@ -57,7 +57,7 @@ async fn process_file_request(path_buf: &Path, file: &mut File) -> Result<Respon
 }
 
 async fn process_request_worker(
-    args: &Args,
+    settings: &Settings,
     req: &Request<Body>,
 ) -> Result<Response<Body>, MyError> {
     let file_path = req.uri().path();
@@ -66,15 +66,13 @@ async fn process_request_worker(
     //       Convert to a 404 or 500 error if so.
     assert!(!file_path.is_empty() && &file_path[0..1] == "/");
 
-    let git_repo = args.git_repo();
-
-    let mut path_buf = git_repo.clone();
+    let mut path_buf = settings.git_repo().clone();
     path_buf.push(&file_path[1..]);
 
     path_buf = path_buf.canonicalize()?;
     info!("canonicalized path: {:?}", path_buf);
 
-    if !path_buf.starts_with(&git_repo) {
+    if !path_buf.starts_with(settings.git_repo()) {
         // TODO: Stronger resistance against path traversal attacks.
         // We are checking paths here, but ideally the operating system would
         // also have our back. Something like OpenBSD's `pledge(2)` could
@@ -101,8 +99,11 @@ async fn process_request_worker(
     }
 }
 
-pub async fn process_request(args: Args, req: Request<Body>) -> Result<Response<Body>, Infallible> {
-    match process_request_worker(&args, &req).await {
+pub async fn process_request(
+    settings: Settings,
+    req: Request<Body>,
+) -> Result<Response<Body>, Infallible> {
+    match process_request_worker(&settings, &req).await {
         Ok(res) => Ok(res),
         Err(err) => Ok(Response::builder()
             .status(StatusCode::INTERNAL_SERVER_ERROR)
