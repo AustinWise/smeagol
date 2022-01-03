@@ -32,7 +32,7 @@ fn markdown_response(file_name: &str, file: &mut File) -> Result<Response<Body>,
 
     Ok(Response::builder()
         .status(StatusCode::OK)
-        .header(header::CONTENT_TYPE, "text/html")
+        .header(header::CONTENT_TYPE, "text/html; charset=UTF-8")
         .body(Body::from(html_output))?)
 }
 
@@ -98,7 +98,7 @@ pub async fn process_request(args: Args, req: Request<Body>) -> Result<Response<
         Ok(res) => Ok(res),
         Err(err) => Ok(Response::builder()
             .status(StatusCode::INTERNAL_SERVER_ERROR)
-            .header(header::CONTENT_TYPE, "text/plain")
+            .header(header::CONTENT_TYPE, "text/plain; charset=UTF-8")
             .body(Body::from(format!("Something went wrong: {:?}", err)))
             .unwrap()),
     }
