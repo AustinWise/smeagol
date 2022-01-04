@@ -23,8 +23,12 @@ pub enum MyError {
         #[from]
         source: askama::Error,
     },
-    #[error("config file error")]
-    ConfigFileError {
+    #[error("Failed to read config file.")]
+    ConfigReadError{
+        source: std::io::Error,
+    },
+    #[error("Failed to parse config file.")]
+    ConfigParseError {
         #[from]
         source: toml::de::Error,
     }

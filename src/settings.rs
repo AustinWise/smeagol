@@ -38,8 +38,11 @@ impl Settings {
 fn load_config(git_repo: &Path) -> Result<Config, MyError> {
     let mut config_path = git_repo.to_path_buf();
     config_path.push("smeagol.toml");
-    if let Ok(config_str) = std::fs::read_to_string(config_path) {
-        Ok(toml::from_str(&config_str)?)
+    if config_path.is_file() {
+        match std::fs::read_to_string(config_path) {
+            Ok(config_str) => Ok(toml::from_str(&config_str)?),
+            Err(err) => Err(MyError::ConfigReadError { source: err }),
+        }
     } else {
         Ok(Default::default())
     }
