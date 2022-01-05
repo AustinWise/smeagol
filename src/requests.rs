@@ -8,27 +8,74 @@ use log::info;
 use hyper::header;
 use hyper::{Body, Request, Response, StatusCode};
 
-use pulldown_cmark::{html, Options};
+use pulldown_cmark::{html, Event, HeadingLevel, Options, Parser, Tag};
 
 use crate::error::MyError;
 use crate::settings::Settings;
 use crate::templates::render_page;
 
-fn markdown_response(file_name: &str, file: &mut File) -> Result<Response<Body>, MyError> {
+struct MarkdownPage<'a> {
+    title: String,
+    events: Vec<Event<'a>>,
+}
+
+fn try_get_h1_title(
+    settings: &Settings,
+    fallback_file_name: &str,
+    events: &mut Vec<Event>,
+) -> String {
+    if settings.h1_title() && events.len() >= 2 {
+        if let Event::Start(Tag::Heading(HeadingLevel::H1, _, _)) = events[0] {
+            if let Event::End(Tag::Heading(HeadingLevel::H1, _, _)) = events[2] {
+                if let Event::Text(str) = &events[1] {
+                    let ret = str.to_string();
+                    events.drain(0..3);
+                    return ret;
+                }
+            }
+        }
+    }
+    fallback_file_name.to_owned()
+}
+
+impl<'a> MarkdownPage<'a> {
+    fn new(settings: &'a Settings, file_name: &'a str, src: &'a str) -> MarkdownPage<'a> {
+        let mut options = Options::empty();
+        options.insert(Options::ENABLE_TABLES);
+        options.insert(Options::ENABLE_FOOTNOTES);
+        options.insert(Options::ENABLE_STRIKETHROUGH);
+        options.insert(Options::ENABLE_TASKLISTS);
+        options.insert(Options::ENABLE_SMART_PUNCTUATION);
+        let mut events: Vec<Event<'a>> = Parser::new_ext(src, options).collect();
+        let title = try_get_h1_title(settings, file_name, &mut events);
+
+        MarkdownPage { title, events }
+    }
+
+    fn title(&'a self) -> &'a str {
+        &self.title
+    }
+
+    fn render_html(self) -> String {
+        let mut rendered_markdown = String::new();
+        html::push_html(&mut rendered_markdown, self.events.into_iter());
+        rendered_markdown
+    }
+}
+
+fn markdown_response(
+    settings: &Settings,
+    file_name: &str,
+    file: &mut File,
+) -> Result<Response<Body>, MyError> {
     let mut markdown_input = String::new();
     file.read_to_string(&mut markdown_input)?;
+    let markdown_page = MarkdownPage::new(settings, file_name, &markdown_input);
 
-    // Set up options and parser. Strikethroughs are not part of the CommonMark standard
-    // and we therefore must enable it explicitly.
-    let mut options = Options::empty();
-    options.insert(Options::ENABLE_STRIKETHROUGH);
-    let parser = pulldown_cmark::Parser::new_ext(&markdown_input, options);
+    let title = markdown_page.title().to_owned();
+    let rendered_markdown = markdown_page.render_html();
 
-    // Write to String buffer.
-    let mut rendered_markdown = String::new();
-    html::push_html(&mut rendered_markdown, parser);
-
-    let html_output = render_page(file_name, &rendered_markdown)?;
+    let html_output = render_page(&title, &rendered_markdown)?;
 
     Ok(Response::builder()
         .status(StatusCode::OK)
@@ -36,7 +83,11 @@ fn markdown_response(file_name: &str, file: &mut File) -> Result<Response<Body>,
         .body(Body::from(html_output))?)
 }
 
-async fn process_file_request(path_buf: &Path, file: &mut File) -> Result<Response<Body>, MyError> {
+async fn process_file_request(
+    settings: &Settings,
+    path_buf: &Path,
+    file: &mut File,
+) -> Result<Response<Body>, MyError> {
     let ext = match path_buf.extension() {
         None => return Err(MyError::BadPath),
         Some(ext) => ext,
@@ -50,8 +101,12 @@ async fn process_file_request(path_buf: &Path, file: &mut File) -> Result<Respon
     info!("f: {:?} ext: {}", path_buf, ext);
 
     match ext {
-        // TODO: consider when these could fail and handle if needed.
-        "md" => markdown_response(path_buf.file_name().unwrap().to_str().unwrap(), file),
+        "md" => markdown_response(
+            settings,
+            // TODO: consider when these could fail and handle if needed.
+            path_buf.file_stem().unwrap().to_str().unwrap(),
+            file,
+        ),
         _ => Err(MyError::UnknownFilePath),
     }
 }
@@ -108,7 +163,7 @@ async fn process_request_worker(
     } else {
         info!("Opening file: {:?}", path_buf);
         let mut f = File::open(&path_buf)?;
-        Ok(process_file_request(&path_buf, &mut f).await?)
+        Ok(process_file_request(settings, &path_buf, &mut f).await?)
     }
 }
 
@@ -123,5 +178,30 @@ pub async fn process_request(
             .header(header::CONTENT_TYPE, "text/plain; charset=UTF-8")
             .body(Body::from(format!("Something went wrong: {:?}", err)))
             .unwrap()),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_normal_title() {
+        let settings = Settings::new("Home", false);
+        let input = "# First H1\n# Second H1";
+        let markdown_page = MarkdownPage::new(&settings, "file_name", &input);
+        assert_eq!("file_name", markdown_page.title());
+        let rendered = markdown_page.render_html();
+        assert_eq!("<h1>First H1</h1>\n<h1>Second H1</h1>\n", rendered);
+    }
+
+    #[test]
+    fn test_h1_title() {
+        let settings = Settings::new("Home", true);
+        let input = "# First H1\n# Second H1";
+        let markdown_page = MarkdownPage::new(&settings, "file_name", &input);
+        assert_eq!("First H1", markdown_page.title());
+        let rendered = markdown_page.render_html();
+        assert_eq!("<h1>Second H1</h1>\n", rendered);
     }
 }

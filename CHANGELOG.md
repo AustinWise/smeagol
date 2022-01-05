@@ -1,5 +1,9 @@
+WIP
+===
 
-0.1.0
+* Add support for `h1_title` setting.
+
+0.1.0 (2022-01-04)
 =====
 
 Initial proof of concept version. Basically a web server that renders markdown
