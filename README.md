@@ -22,7 +22,6 @@ to `gem install` on a low-powered Chromebook.
 
 An incomplete list:
 
-* CI/CD, to deliver on the promise of being faster to install than Gollum.
 * Put some chrome around the rendered markdown pages.
 * Maybe a list of files when viewing directories, like GitHub does
 * Editing support
