@@ -69,13 +69,20 @@ async fn process_request_worker(
     let mut path_buf = settings.git_repo().clone();
     path_buf.push(&file_path[1..]);
 
-    path_buf = path_buf.canonicalize()?;
+    let path_buf = match path_buf.canonicalize() {
+        Ok(b) => b,
+        Err(_) => {
+            return Ok(Response::builder()
+                .status(StatusCode::NOT_FOUND)
+                .body(Body::from(format!("Path not found: {:?}", path_buf)))?);
+        }
+    };
     info!("canonicalized path: {:?}", path_buf);
 
     if !path_buf.starts_with(settings.git_repo()) {
         // TODO: Stronger resistance against path traversal attacks.
         // We are checking paths here, but ideally the operating system would
-        // also have our back. Something like OpenBSD's `pledge(2)` could
+        // also have our back. Something like OpenBSD's `unveil(2)` could
         // prevent us from accessing files we did not intend to access.
         return Ok(Response::builder()
             .status(StatusCode::NOT_FOUND)
@@ -84,8 +91,9 @@ async fn process_request_worker(
 
     if path_buf.is_dir() {
         info!(
-            "Path '{:?}' appears to be a directory, appending README.md",
-            path_buf
+            "Path '{:?}' appears to be a directory, appending {}.md",
+            path_buf,
+            settings.index_page()
         );
         let mut file_path = file_path.to_owned();
         if !file_path.ends_with('/') {
@@ -98,13 +106,9 @@ async fn process_request_worker(
             .header(header::LOCATION, file_path)
             .body(Body::empty())?)
     } else {
-        // TODO: handle directories. Maybe redirect to README.md or show automatically?
-        match File::open(&path_buf) {
-            Ok(mut f) => process_file_request(&path_buf, &mut f).await,
-            Err(_) => Ok(Response::builder()
-                .status(StatusCode::NOT_FOUND)
-                .body(Body::from(format!("File not found: {:?}", path_buf)))?),
-        }
+        info!("Opening file: {:?}", path_buf);
+        let mut f = File::open(&path_buf)?;
+        Ok(process_file_request(&path_buf, &mut f).await?)
     }
 }
 
