@@ -529,7 +529,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "smeagol"
+name = "smeagol-wiki"
 version = "0.1.0"
 dependencies = [
  "askama",

@@ -38,7 +38,7 @@ jobs:
       # Emit backtraces on panics.
       RUST_BACKTRACE: 1
       # The name of the program executable.
-      PROGRAM_NAME: smeagol
+      PROGRAM_NAME: smeagol-wiki
     strategy:
       matrix:
         build: [linux-x64, linux-arm32, linux-arm64, macos-x64, macos-arm64, win-x64-msvc, win-x86-msvc, win-arm64-msvc]
