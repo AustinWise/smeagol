@@ -49,6 +49,6 @@ An incomplete list:
 
 ## Why Rust, please tell me more about why you love Rust
 
-Rust makes it easy to ship compiled executables that run without much fuss.
+Rust makes it easy to ship cross-compiled executables that run without much fuss.
 As for why not some other language also shares this capability (Go or C#),
 I just want to get more experience working with Rust.
