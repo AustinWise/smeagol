@@ -176,7 +176,7 @@ pub async fn process_request(
         Err(err) => Ok(Response::builder()
             .status(StatusCode::INTERNAL_SERVER_ERROR)
             .header(header::CONTENT_TYPE, "text/plain; charset=UTF-8")
-            .body(Body::from(format!("Something went wrong: {:?}", err)))
+            .body(Body::from(format!("Failure processing request: {:?}", err)))
             .unwrap()),
     }
 }
