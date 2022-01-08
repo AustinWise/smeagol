@@ -32,9 +32,8 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
-      with:
-        fetch-depth: 1
 
+    # See: https://github.com/actions/cache/blob/main/examples.md#rust---cargo
     - uses: actions/cache@v2
       with:
         path: |
