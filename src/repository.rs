@@ -71,7 +71,11 @@ impl Repository for FileSystemRepository {
     }
 }
 
-pub fn create_file_system_repository(dir_path: &str) -> Result<impl Repository, MyError> {
-    let root_dir = Path::new(dir_path).canonicalize()?;
-    Ok(FileSystemRepository { root_dir })
+pub fn create_file_system_repository(dir_path: PathBuf) -> Result<impl Repository, MyError> {
+    let root_dir = dir_path.canonicalize()?;
+    if root_dir.is_dir() {
+        Ok(FileSystemRepository { root_dir })
+    } else {
+        Err(MyError::GitRepoDoesNotExist)
+    }
 }

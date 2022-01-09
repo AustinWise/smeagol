@@ -27,14 +27,15 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     pretty_env_logger::init();
 
     let settings = parse_settings_from_args()?;
-    // let repo = create_file_system_repository(&settings.git_repo())?;
+    let repo = create_file_system_repository(settings.git_repo().clone())?;
+    let wiki = wiki::Wiki::new(settings, Box::new(repo));
 
     let make_svc = make_service_fn(|_conn| {
         // TODO: figure out how to give settings a static lifetime so cloning is not needed
-        let settings = settings.clone();
+        let wiki = wiki.clone();
         async {
             Ok::<_, Infallible>(service_fn(move |req| {
-                process_request(settings.clone(), req)
+                process_request(wiki.clone(), req)
             }))
         }
     });

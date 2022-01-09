@@ -13,6 +13,7 @@ use pulldown_cmark::{html, Event, HeadingLevel, Options, Parser, Tag};
 use crate::error::MyError;
 use crate::settings::Settings;
 use crate::templates::render_page;
+use crate::wiki::Wiki;
 
 struct MarkdownPage<'a> {
     title: String,
@@ -64,13 +65,14 @@ impl<'a> MarkdownPage<'a> {
 }
 
 fn markdown_response(
-    settings: &Settings,
+    wiki: &Wiki,
     file_name: &str,
     file: &mut File,
 ) -> Result<Response<Body>, MyError> {
     let mut markdown_input = String::new();
     file.read_to_string(&mut markdown_input)?;
-    let markdown_page = MarkdownPage::new(settings, file_name, &markdown_input);
+    let settings = wiki.settings();
+    let markdown_page = MarkdownPage::new(&settings, file_name, &markdown_input);
 
     let title = markdown_page.title().to_owned();
     let rendered_markdown = markdown_page.render_html();
@@ -84,7 +86,7 @@ fn markdown_response(
 }
 
 async fn process_file_request(
-    settings: &Settings,
+    wiki: &Wiki,
     path_buf: &Path,
     file: &mut File,
 ) -> Result<Response<Body>, MyError> {
@@ -100,7 +102,7 @@ async fn process_file_request(
 
     match ext {
         "md" => markdown_response(
-            settings,
+            wiki,
             // TODO: consider when these could fail and handle if needed.
             path_buf.file_stem().unwrap().to_str().unwrap(),
             file,
@@ -110,7 +112,7 @@ async fn process_file_request(
 }
 
 async fn process_request_worker(
-    settings: &Settings,
+    wiki: &Wiki,
     req: &Request<Body>,
 ) -> Result<Response<Body>, MyError> {
     let file_path = req.uri().path();
@@ -118,6 +120,8 @@ async fn process_request_worker(
     // TODO: Figure out if there is any reason we would not get a slash.
     //       Convert to a 404 or 500 error if so.
     assert!(!file_path.is_empty() && &file_path[0..1] == "/");
+
+    let settings = wiki.settings();
 
     let mut path_buf = settings.git_repo().clone();
     path_buf.push(&file_path[1..]);
@@ -146,13 +150,13 @@ async fn process_request_worker(
         info!(
             "Path '{:?}' appears to be a directory, appending {}.md",
             path_buf,
-            settings.index_page()
+            wiki.settings().index_page()
         );
         let mut file_path = file_path.to_owned();
         if !file_path.ends_with('/') {
             file_path += "/";
         }
-        file_path += settings.index_page();
+        file_path += wiki.settings().index_page();
         file_path += ".md";
         Ok(Response::builder()
             .status(StatusCode::FOUND)
@@ -161,15 +165,12 @@ async fn process_request_worker(
     } else {
         info!("Opening file: {:?}", path_buf);
         let mut f = File::open(&path_buf)?;
-        Ok(process_file_request(settings, &path_buf, &mut f).await?)
+        Ok(process_file_request(wiki, &path_buf, &mut f).await?)
     }
 }
 
-pub async fn process_request(
-    settings: Settings,
-    req: Request<Body>,
-) -> Result<Response<Body>, Infallible> {
-    match process_request_worker(&settings, &req).await {
+pub async fn process_request(wiki: Wiki, req: Request<Body>) -> Result<Response<Body>, Infallible> {
+    match process_request_worker(&wiki, &req).await {
         Ok(res) => Ok(res),
         Err(err) => Ok(Response::builder()
             .status(StatusCode::INTERNAL_SERVER_ERROR)

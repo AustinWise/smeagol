@@ -1,31 +1,32 @@
+use std::sync::{Mutex, Arc};
+
 use crate::repository::Repository;
 use crate::settings::Settings;
 
 /// Wiki god object.
-pub struct Wiki<TRepository>
-where
-    TRepository: Repository,
+struct WikiInner
 {
     settings: Settings,
-    repository: TRepository,
+    repository: Box<dyn Repository + Send>,
 }
 
-impl<TRepository> Wiki<TRepository>
-where
-    TRepository: Repository,
+// TODO: there must be a way to share immutable state that does not involve a mutex
+#[derive(Clone)]
+pub struct Wiki(Arc<Mutex<WikiInner>>);
+
+impl Wiki
 {
-    pub fn new(settings: Settings, repository: TRepository) -> Self {
-        Wiki {
+    pub fn new(settings: Settings, repository: Box<dyn Repository + Send>) -> Self {
+        let inner = WikiInner {
             settings,
             repository,
-        }
+        };
+        Wiki(Arc::from(Mutex::new(inner)))
     }
 
-    pub fn settings(&self) -> &Settings {
-        &self.settings
+    pub fn settings(&self) -> Settings {
+        // TODO: stop the cloning madness
+        self.0.lock().unwrap().settings.clone()
     }
 
-    pub fn repository(&self) -> &TRepository {
-        &self.repository
-    }
 }
