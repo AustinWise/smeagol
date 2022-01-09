@@ -98,8 +98,6 @@ async fn process_file_request(
         Some(ext) => ext,
     };
 
-    info!("f: {:?} ext: {}", path_buf, ext);
-
     match ext {
         "md" => markdown_response(
             settings,
