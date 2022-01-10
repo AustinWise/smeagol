@@ -23,9 +23,8 @@ impl Wiki {
         Wiki(Arc::from(inner))
     }
 
-    pub fn settings(&self) -> Settings {
-        // TODO: stop the cloning madness
-        self.0.settings.clone()
+    pub fn settings(&self) -> &Settings {
+        &self.0.settings
     }
 
     pub fn read_file(&self, file_path: &str) -> Result<Vec<u8>, MyError> {
