@@ -33,11 +33,7 @@ pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let make_svc = make_service_fn(|_conn| {
         // TODO: figure out how to give settings a static lifetime so cloning is not needed
         let wiki = wiki.clone();
-        async {
-            Ok::<_, Infallible>(service_fn(move |req| {
-                process_request(wiki.clone(), req)
-            }))
-        }
+        async { Ok::<_, Infallible>(service_fn(move |req| process_request(wiki.clone(), req))) }
     });
     let addr: SocketAddr = ([127, 0, 0, 1], 3000).into();
     let server = Server::bind(&addr)

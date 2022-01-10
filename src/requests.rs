@@ -114,7 +114,10 @@ async fn process_file_request(
     byte: &[u8],
 ) -> Result<Response<Body>, MyError> {
     let path_info = RequestPathParts::parse(request_path)?;
-    info!("path_info: file_stem: {} file_ext: {}", path_info.file_stem, path_info.file_extension);
+    info!(
+        "path_info: file_stem: {} file_ext: {}",
+        path_info.file_stem, path_info.file_extension
+    );
 
     match path_info.file_extension {
         "md" => markdown_response(

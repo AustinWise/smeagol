@@ -33,6 +33,6 @@ pub enum MyError {
     #[error("Not valid UTF-8")]
     BadUtf8 {
         #[from]
-        source: std::str::Utf8Error
-    }
+        source: std::str::Utf8Error,
+    },
 }
