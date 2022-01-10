@@ -10,7 +10,7 @@ struct WikiInner {
     repository: Box<dyn Repository + Send + Sync>,
 }
 
-// TODO: there must be a way to share immutable state that does not involve a mutex
+// TODO: is there are away to share immutable global without the reference counting? A 'static lifetime somehow?
 #[derive(Clone)]
 pub struct Wiki(Arc<WikiInner>);
 
