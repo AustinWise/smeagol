@@ -21,8 +21,8 @@ impl FileSystemRepository {
     fn canonicalize_path(&self, relative_path: &str) -> Result<PathBuf, MyError> {
         let mut path = self.root_dir.to_path_buf();
         //TODO: decide whether to always require paths to start with the a slash or to always NOT start with a slash
-        if relative_path.starts_with('/') {
-            path.push(&relative_path[1..]);
+        if let Some(stripped) = relative_path.strip_prefix('/') {
+            path.push(stripped);
         } else {
             path.push(&relative_path);
         }

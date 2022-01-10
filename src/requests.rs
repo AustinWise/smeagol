@@ -64,11 +64,11 @@ impl<'a> MarkdownPage<'a> {
 fn markdown_response(
     wiki: &Wiki,
     file_name: &str,
-    bytes: &Vec<u8>,
+    bytes: &[u8],
 ) -> Result<Response<Body>, MyError> {
     let markdown_input = std::str::from_utf8(bytes)?;
     let settings = wiki.settings();
-    let markdown_page = MarkdownPage::new(&settings, file_name, &markdown_input);
+    let markdown_page = MarkdownPage::new(settings, file_name, markdown_input);
 
     let title = markdown_page.title().to_owned();
     let rendered_markdown = markdown_page.render_html();
@@ -111,7 +111,7 @@ impl<'a> RequestPathParts<'a> {
 async fn process_file_request(
     wiki: &Wiki,
     request_path: &str,
-    byte: &Vec<u8>,
+    byte: &[u8],
 ) -> Result<Response<Body>, MyError> {
     let path_info = RequestPathParts::parse(request_path)?;
     info!("path_info: file_stem: {} file_ext: {}", path_info.file_stem, path_info.file_extension);
@@ -152,7 +152,7 @@ async fn process_request_worker(
     }
 
     match wiki.read_file(file_path) {
-        Ok(bytes) => Ok(process_file_request(wiki, &file_path, &bytes).await?),
+        Ok(bytes) => Ok(process_file_request(wiki, file_path, &bytes).await?),
         Err(_) => {
             return Ok(Response::builder()
                 .status(StatusCode::NOT_FOUND)
