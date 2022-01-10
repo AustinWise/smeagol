@@ -1,7 +1,4 @@
 use std::convert::Infallible;
-use std::fs::File;
-use std::io::Read;
-use std::path::Path;
 
 use log::info;
 
@@ -13,6 +10,7 @@ use pulldown_cmark::{html, Event, HeadingLevel, Options, Parser, Tag};
 use crate::error::MyError;
 use crate::settings::Settings;
 use crate::templates::render_page;
+use crate::wiki::Wiki;
 
 struct MarkdownPage<'a> {
     title: String,
@@ -64,13 +62,13 @@ impl<'a> MarkdownPage<'a> {
 }
 
 fn markdown_response(
-    settings: &Settings,
+    wiki: &Wiki,
     file_name: &str,
-    file: &mut File,
+    bytes: &[u8],
 ) -> Result<Response<Body>, MyError> {
-    let mut markdown_input = String::new();
-    file.read_to_string(&mut markdown_input)?;
-    let markdown_page = MarkdownPage::new(settings, file_name, &markdown_input);
+    let markdown_input = std::str::from_utf8(bytes)?;
+    let settings = wiki.settings();
+    let markdown_page = MarkdownPage::new(settings, file_name, markdown_input);
 
     let title = markdown_page.title().to_owned();
     let rendered_markdown = markdown_page.render_html();
@@ -83,95 +81,91 @@ fn markdown_response(
         .body(Body::from(html_output))?)
 }
 
+struct RequestPathParts<'a> {
+    // pub path_elements: Vec<&'a str>,
+    pub file_stem: &'a str,
+    pub file_extension: &'a str,
+}
+
+impl<'a> RequestPathParts<'a> {
+    pub fn parse(request_path: &'a str) -> Result<Self, MyError> {
+        let path_elements: Vec<&str> = request_path.split('/').collect();
+        let file_name = path_elements.last().unwrap();
+
+        let name_elements: Vec<&str> = file_name.rsplitn(2, '.').collect();
+        if name_elements.len() != 2 {
+            //TODO: support files that have no extension
+            return Err(MyError::BadPath);
+        }
+
+        let file_stem = name_elements.last().unwrap();
+        let file_extension = name_elements.first().unwrap();
+        Ok(RequestPathParts {
+            // path_elements,
+            file_stem,
+            file_extension,
+        })
+    }
+}
+
 async fn process_file_request(
-    settings: &Settings,
-    path_buf: &Path,
-    file: &mut File,
+    wiki: &Wiki,
+    request_path: &str,
+    byte: &[u8],
 ) -> Result<Response<Body>, MyError> {
-    let ext = match path_buf.extension() {
-        None => return Err(MyError::BadPath),
-        Some(ext) => ext,
-    };
+    let path_info = RequestPathParts::parse(request_path)?;
+    info!(
+        "path_info: file_stem: {} file_ext: {}",
+        path_info.file_stem, path_info.file_extension
+    );
 
-    let ext = match ext.to_str() {
-        None => return Err(MyError::BadPath),
-        Some(ext) => ext,
-    };
-
-    info!("f: {:?} ext: {}", path_buf, ext);
-
-    match ext {
+    match path_info.file_extension {
         "md" => markdown_response(
-            settings,
+            wiki,
             // TODO: consider when these could fail and handle if needed.
-            path_buf.file_stem().unwrap().to_str().unwrap(),
-            file,
+            path_info.file_stem,
+            byte,
         ),
         _ => Err(MyError::UnknownFilePath),
     }
 }
 
 async fn process_request_worker(
-    settings: &Settings,
+    wiki: &Wiki,
     req: &Request<Body>,
 ) -> Result<Response<Body>, MyError> {
     let file_path = req.uri().path();
     info!("start request: {}", file_path);
-    // TODO: Figure out if there is any reason we would not get a slash.
-    //       Convert to a 404 or 500 error if so.
-    assert!(!file_path.is_empty() && &file_path[0..1] == "/");
 
-    let mut path_buf = settings.git_repo().clone();
-    path_buf.push(&file_path[1..]);
+    let settings = wiki.settings();
 
-    let path_buf = match path_buf.canonicalize() {
-        Ok(b) => b,
-        Err(_) => {
-            return Ok(Response::builder()
-                .status(StatusCode::NOT_FOUND)
-                .body(Body::from(format!("Path not found: {:?}", path_buf)))?);
-        }
-    };
-    info!("canonicalized path: {:?}", path_buf);
-
-    if !path_buf.starts_with(settings.git_repo()) {
-        // TODO: Stronger resistance against path traversal attacks.
-        // We are checking paths here, but ideally the operating system would
-        // also have our back. Something like OpenBSD's `unveil(2)` could
-        // prevent us from accessing files we did not intend to access.
-        return Ok(Response::builder()
-            .status(StatusCode::NOT_FOUND)
-            .body(Body::from("Path traversal attack."))?);
-    }
-
-    if path_buf.is_dir() {
+    if file_path.ends_with('/') {
         info!(
             "Path '{:?}' appears to be a directory, appending {}.md",
-            path_buf,
+            file_path,
             settings.index_page()
         );
         let mut file_path = file_path.to_owned();
-        if !file_path.ends_with('/') {
-            file_path += "/";
-        }
         file_path += settings.index_page();
         file_path += ".md";
-        Ok(Response::builder()
+        return Ok(Response::builder()
             .status(StatusCode::FOUND)
             .header(header::LOCATION, file_path)
-            .body(Body::empty())?)
-    } else {
-        info!("Opening file: {:?}", path_buf);
-        let mut f = File::open(&path_buf)?;
-        Ok(process_file_request(settings, &path_buf, &mut f).await?)
+            .body(Body::empty())?);
+    }
+
+    match wiki.read_file(file_path) {
+        Ok(bytes) => Ok(process_file_request(wiki, file_path, &bytes).await?),
+        Err(_) => {
+            return Ok(Response::builder()
+                .status(StatusCode::NOT_FOUND)
+                .body(Body::from(format!("Path not found: {:?}", file_path)))?);
+        }
     }
 }
 
-pub async fn process_request(
-    settings: Settings,
-    req: Request<Body>,
-) -> Result<Response<Body>, Infallible> {
-    match process_request_worker(&settings, &req).await {
+pub async fn process_request(wiki: Wiki, req: Request<Body>) -> Result<Response<Body>, Infallible> {
+    match process_request_worker(&wiki, &req).await {
         Ok(res) => Ok(res),
         Err(err) => Ok(Response::builder()
             .status(StatusCode::INTERNAL_SERVER_ERROR)
