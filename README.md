@@ -45,6 +45,13 @@ An incomplete list:
   to support both.
 * Consider a fancier web app framework than Hyper.
 * Consider supporting markup formats other than Markdown.
+* Audit the different `From` implementations for `MyError`. Make sure the
+  message matches the level of specificity of the error type they convert from.
+* Nicer error messages. An incomplete list of cases:
+  * When a markdown file is not valid UTF-8.
+  * Failures to read wiki pages.
+  * Failure to find wiki pages.
+* Use a real bug tracking system.
 
 ## Why Rust, please tell me more about why you love Rust
 

@@ -30,4 +30,9 @@ pub enum MyError {
         #[from]
         source: toml::de::Error,
     },
+    #[error("Not valid UTF-8")]
+    BadUtf8 {
+        #[from]
+        source: std::str::Utf8Error
+    }
 }
