@@ -28,6 +28,6 @@ impl Wiki {
     }
 
     pub fn read_file(&self, file_path: &str) -> Result<Vec<u8>, MyError> {
-        self.0.repository.as_ref().read_file(file_path)
+        self.0.repository.read_file(file_path)
     }
 }
