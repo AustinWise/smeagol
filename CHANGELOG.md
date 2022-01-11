@@ -2,6 +2,7 @@ WIP
 ===
 
 * Add support for `h1_title` setting.
+* Add breadcrumbs navigation
 
 0.1.0 (2022-01-04)
 =====

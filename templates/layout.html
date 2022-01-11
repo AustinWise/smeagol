@@ -13,6 +13,15 @@
     </header>
     <main>
         <h1>{{title}}</h1>
+        <nav aria-label="Breadcrumb">
+            <ol>
+                {% for crumb in breadcrumbs %}
+                <li class="breadcrumb-item">
+                    <a href="{{crumb.href}}">{{crumb.name}}</a>
+                </li>
+                {% endfor %}
+            </ol>
+        </nav>
         <dic class="markdown-body">
             {{content}}
         </dic>

@@ -63,17 +63,17 @@ impl<'a> MarkdownPage<'a> {
 
 fn markdown_response(
     wiki: &Wiki,
-    file_name: &str,
+    path: &RequestPathParts,
     bytes: &[u8],
 ) -> Result<Response<Body>, MyError> {
     let markdown_input = std::str::from_utf8(bytes)?;
     let settings = wiki.settings();
-    let markdown_page = MarkdownPage::new(settings, file_name, markdown_input);
+    let markdown_page = MarkdownPage::new(settings, path.file_stem, markdown_input);
 
     let title = markdown_page.title().to_owned();
     let rendered_markdown = markdown_page.render_html();
 
-    let html_output = render_page(&title, &rendered_markdown)?;
+    let html_output = render_page(&title, &rendered_markdown, &path.path_elements)?;
 
     Ok(Response::builder()
         .status(StatusCode::OK)
@@ -111,16 +111,12 @@ async fn process_file_request(
     byte: &[u8],
 ) -> Result<Response<Body>, MyError> {
     let path_info = RequestPathParts::parse(request_path)?;
-    info!(
-        "path_info: file_stem: {} file_ext: {}",
-        path_info.file_stem, path_info.file_extension
-    );
 
     match path_info.file_extension {
         "md" => markdown_response(
             wiki,
             // TODO: consider when these could fail and handle if needed.
-            path_info.file_stem,
+            &path_info,
             byte,
         ),
         _ => Err(MyError::UnknownFilePath),
