@@ -82,26 +82,23 @@ fn markdown_response(
 }
 
 struct RequestPathParts<'a> {
-    // pub path_elements: Vec<&'a str>,
+    pub path_elements: Vec<&'a str>,
     pub file_stem: &'a str,
     pub file_extension: &'a str,
 }
 
 impl<'a> RequestPathParts<'a> {
     pub fn parse(request_path: &'a str) -> Result<Self, MyError> {
-        let path_elements: Vec<&str> = request_path.split('/').collect();
-        let file_name = path_elements.last().unwrap();
+        assert!(request_path.starts_with('/'));
 
-        let name_elements: Vec<&str> = file_name.rsplitn(2, '.').collect();
-        if name_elements.len() != 2 {
-            //TODO: support files that have no extension
-            return Err(MyError::BadPath);
-        }
+        let path_elements: Vec<&str> = request_path[1..].split('/').collect();
+        let (file_name, path_elements) = path_elements.split_last().unwrap();
 
-        let file_stem = name_elements.last().unwrap();
-        let file_extension = name_elements.first().unwrap();
+        // TODO: support file names without file extensions
+        let (file_stem, file_extension) = file_name.rsplit_once('.').unwrap();
+        let path_elements: Vec<&'a str> = path_elements.into();
         Ok(RequestPathParts {
-            // path_elements,
+            path_elements,
             file_stem,
             file_extension,
         })
@@ -197,5 +194,42 @@ mod tests {
         assert_eq!("First H1", markdown_page.title());
         let rendered = markdown_page.render_html();
         assert_eq!("<h1>Second H1</h1>\n", rendered);
+    }
+
+    fn assert_request_path_parse(
+        input: &str,
+        expected_file_stem: &str,
+        expected_file_extension: &str,
+        expected_path_elements: &[&str],
+    ) {
+        let parsed =
+            RequestPathParts::parse(input).expect(&format!("Failed to parse request: {}", input));
+        assert_eq!(
+            expected_file_stem, parsed.file_stem,
+            "Unexpected file_stem while parsing request: {}",
+            input
+        );
+        assert_eq!(
+            expected_file_extension, parsed.file_extension,
+            "Unexpected file_extension while parsing request: {}",
+            input
+        );
+        assert_eq!(
+            expected_path_elements, parsed.path_elements,
+            "Unexpected path_elements while parsing request: {}",
+            input
+        );
+    }
+
+    #[test]
+    fn test_request_path_parse() {
+        assert_request_path_parse("/README.md", "README", "md", &[]);
+        assert_request_path_parse("/test/file.txt", "file", "txt", &["test"]);
+        assert_request_path_parse(
+            "/another/thing/to/test.markdown",
+            "test",
+            "markdown",
+            &["another", "thing", "to"],
+        );
     }
 }
