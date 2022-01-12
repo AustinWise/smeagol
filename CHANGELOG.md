@@ -1,6 +1,9 @@
 WIP
 ===
 
+0.1.1 (2022-01-12)
+=====
+
 * Add support for `h1_title` setting.
 * Add breadcrumbs navigation
 * Embed CSS in Smeagol, so no internet connection is required to run [#9](https://github.com/AustinWise/smeagol/issues/9)
