@@ -1,0 +1,10 @@
+{
+  "name": "smeagol-wiki",
+  "version": "0.1.0",
+  "description": "A personal wiki",
+  "author": "Austin Wise",
+  "license": "MIT",
+  "dependencies": {
+    "@primer/css": "^19.1.1"
+  }
+}

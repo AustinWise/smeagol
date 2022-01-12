@@ -114,13 +114,24 @@ async fn process_file_request(
 
     match path_info.file_extension {
         "md" => markdown_response(
-            wiki,
-            // TODO: consider when these could fail and handle if needed.
-            &path_info,
-            byte,
+            wiki, // TODO: consider when these could fail and handle if needed.
+            &path_info, byte,
         ),
         _ => Err(MyError::UnknownFilePath),
     }
+}
+
+fn process_smeagol_request(file_path: &str) -> Result<Response<Body>, MyError> {
+    if file_path == "/_smeagol/primer.css" {
+        let css_bytes: &[u8] = include_bytes!("primer.css");
+        return Ok(Response::builder()
+            .status(StatusCode::OK)
+            .header(header::CONTENT_TYPE, "text/css; charset=UTF-8")
+            .body(Body::from(css_bytes))?);
+    }
+    return Ok(Response::builder()
+        .status(StatusCode::NOT_FOUND)
+        .body(Body::from(format!("Path not found: {:?}", file_path)))?);
 }
 
 async fn process_request_worker(
@@ -145,6 +156,10 @@ async fn process_request_worker(
             .status(StatusCode::FOUND)
             .header(header::LOCATION, file_path)
             .body(Body::empty())?);
+    }
+
+    if file_path.starts_with("/_smeagol/") {
+        return process_smeagol_request(file_path);
     }
 
     match wiki.read_file(file_path) {
