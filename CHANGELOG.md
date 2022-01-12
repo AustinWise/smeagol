@@ -4,6 +4,7 @@ WIP
 * Add support for `h1_title` setting.
 * Add breadcrumbs navigation
 * Embed CSS in Smeagol, so no internet connection is required to run [#9](https://github.com/AustinWise/smeagol/issues/9)
+* Add "home" button to go to the top of the site.
 
 0.1.0 (2022-01-04)
 =====

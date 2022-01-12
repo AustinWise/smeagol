@@ -129,11 +129,11 @@ async fn process_file_request(
 
 fn process_smeagol_request(file_path: &str) -> Result<Response<Body>, MyError> {
     if file_path == "/_smeagol/primer.css" {
-        let css_bytes: &[u8] = include_bytes!("primer.css");
+        let primer_css = include_str!("primer.css");
         return Ok(Response::builder()
             .status(StatusCode::OK)
             .header(header::CONTENT_TYPE, "text/css; charset=UTF-8")
-            .body(Body::from(css_bytes))?);
+            .body(Body::from(primer_css))?);
     }
     return Ok(Response::builder()
         .status(StatusCode::NOT_FOUND)

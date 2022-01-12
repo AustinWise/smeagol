@@ -3,8 +3,12 @@
 
 <head>
     <title>{{title}}</title>
-    <!-- TODO: embed css file into the program -->
     <link href="/_smeagol/primer.css" rel="stylesheet" />
+    <style>
+        .markdown-body {
+            padding: 1em 1em 1em 0;
+        }
+    </style>
 </head>
 
 <body class="container-lg">
@@ -12,7 +16,14 @@
 
     </header>
     <main>
-        <h1>{{title}}</h1>
+        <div class="TableObject pt-4 px-2 px-lg-0 overflow-x-scroll">
+            <div class="TableObject-item">
+                <a class="btn btn-sm" id="minibutton-home" href="/">
+                    Home
+                </a>
+            </div>
+        </div>
+        <h1 class="pt-4">{{title}}</h1>
         <nav aria-label="Breadcrumb">
             <ol>
                 {% for crumb in breadcrumbs %}
@@ -22,9 +33,9 @@
                 {% endfor %}
             </ol>
         </nav>
-        <dic class="markdown-body">
+        <div class="markdown-body">
             {{content}}
-        </dic>
+        </div>
     </main>
 
 </body>
