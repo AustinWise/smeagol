@@ -24,13 +24,19 @@ fn try_get_h1_title(
 ) -> String {
     if settings.h1_title() && events.len() >= 2 {
         if let Event::Start(Tag::Heading(HeadingLevel::H1, _, _)) = events[0] {
-            if let Event::End(Tag::Heading(HeadingLevel::H1, _, _)) = events[2] {
-                if let Event::Text(str) = &events[1] {
-                    let ret = str.to_string();
-                    events.drain(0..3);
-                    return ret;
-                }
-            }
+            let end_ndx = events
+                .iter()
+                .position(|e| matches!(e, Event::End(Tag::Heading(HeadingLevel::H1, _, _))))
+                .unwrap();
+            let title = events[1..end_ndx]
+                .iter()
+                .map(|e| match e {
+                    Event::Text(str) => str.to_string(),
+                    not_str => panic!("Expected str, got: {:?}", not_str),
+                })
+                .collect();
+            events.drain(0..=end_ndx);
+            return title;
         }
     }
     fallback_file_name.to_owned()
@@ -205,6 +211,16 @@ mod tests {
         assert_eq!("First H1", markdown_page.title());
         let rendered = markdown_page.render_html();
         assert_eq!("<h1>Second H1</h1>\n", rendered);
+    }
+
+    #[test]
+    fn test_h1_title_complicated() {
+        let settings = Settings::new("Home", true);
+        let input = "# Austin\'s Wiki\nwords words words";
+        let markdown_page = MarkdownPage::new(&settings, "file_name", &input);
+        assert_eq!("Austin\u{2019}s Wiki", markdown_page.title());
+        let rendered = markdown_page.render_html();
+        assert_eq!("<p>words words words</p>\n", rendered);
     }
 
     fn assert_request_path_parse(
