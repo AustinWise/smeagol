@@ -1,11 +1,14 @@
-use std::convert::Infallible;
-
-use log::info;
-
-use hyper::header;
-use hyper::{Body, Request, Response, StatusCode};
-
 use pulldown_cmark::{html, Event, HeadingLevel, Options, Parser, Tag};
+use rocket::http::impl_from_uri_param_identity;
+use rocket::http::uri::fmt::Formatter;
+use rocket::http::uri::fmt::Path;
+use rocket::http::uri::fmt::UriDisplay;
+use rocket::http::uri::Segments;
+use rocket::request::FromSegments;
+use rocket::response;
+use rocket::response::content;
+use rocket::response::Responder;
+use rocket::{Build, Rocket};
 
 use crate::error::MyError;
 use crate::settings::Settings;
@@ -71,7 +74,7 @@ fn markdown_response(
     wiki: &Wiki,
     path: &RequestPathParts,
     bytes: &[u8],
-) -> Result<Response<Body>, MyError> {
+) -> Result<String, MyError> {
     let markdown_input = std::str::from_utf8(bytes)?;
     let settings = wiki.settings();
     let markdown_page = MarkdownPage::new(settings, path.file_stem, markdown_input);
@@ -79,30 +82,26 @@ fn markdown_response(
     let title = markdown_page.title().to_owned();
     let rendered_markdown = markdown_page.render_html();
 
-    let html_output = render_page(&title, &rendered_markdown, &path.path_elements)?;
-
-    Ok(Response::builder()
-        .status(StatusCode::OK)
-        .header(header::CONTENT_TYPE, "text/html; charset=UTF-8")
-        .body(Body::from(html_output))?)
+    Ok(render_page(
+        &title,
+        &rendered_markdown,
+        path.path_elements,
+    )?)
 }
 
+#[derive(Debug)]
 struct RequestPathParts<'a> {
-    pub path_elements: Vec<&'a str>,
+    pub path_elements: &'a [String],
     pub file_stem: &'a str,
     pub file_extension: &'a str,
 }
 
 impl<'a> RequestPathParts<'a> {
-    pub fn parse(request_path: &'a str) -> Result<Self, MyError> {
-        assert!(request_path.starts_with('/'));
-
-        let path_elements: Vec<&str> = request_path[1..].split('/').collect();
+    fn parse(path_elements: &'a [String]) -> Result<Self, MyError> {
         let (file_name, path_elements) = path_elements.split_last().unwrap();
 
         // TODO: support file names without file extensions
         let (file_stem, file_extension) = file_name.rsplit_once('.').unwrap();
-        let path_elements: Vec<&'a str> = path_elements.into();
         Ok(RequestPathParts {
             path_elements,
             file_stem,
@@ -111,82 +110,109 @@ impl<'a> RequestPathParts<'a> {
     }
 }
 
-async fn process_file_request(
-    wiki: &Wiki,
-    request_path: &str,
-    byte: &[u8],
-) -> Result<Response<Body>, MyError> {
-    let path_info = RequestPathParts::parse(request_path)?;
+#[get("/_smeagol/primer.css")]
+fn primer_css() -> content::Css<&'static str> {
+    content::Css(include_str!("primer.css"))
+}
 
-    match path_info.file_extension {
-        "md" => markdown_response(
-            wiki, // TODO: consider when these could fail and handle if needed.
-            &path_info, byte,
-        ),
-        _ => Err(MyError::UnknownFilePath),
+// Most of the time we are returning Content, so it is ok that it is bigger
+#[allow(clippy::large_enum_variant)]
+#[derive(Responder)]
+enum WikiPageResponder {
+    Content(response::content::Html<String>),
+    Redirect(response::Redirect),
+    NotFound(response::status::NotFound<String>),
+}
+
+#[derive(Debug)]
+struct WikiPagePath {
+    //TODO: maybe don't copy all the strings...
+    segments: Vec<String>,
+}
+
+impl WikiPagePath {
+    fn new(segments: Vec<String>) -> Self {
+        WikiPagePath { segments }
+    }
+
+    fn to_parts(&self) -> Result<RequestPathParts, MyError> {
+        RequestPathParts::parse(&self.segments)
     }
 }
 
-fn process_smeagol_request(file_path: &str) -> Result<Response<Body>, MyError> {
-    if file_path == "/_smeagol/primer.css" {
-        let primer_css = include_str!("primer.css");
-        return Ok(Response::builder()
-            .status(StatusCode::OK)
-            .header(header::CONTENT_TYPE, "text/css; charset=UTF-8")
-            .body(Body::from(primer_css))?);
+impl<'r> FromSegments<'r> for WikiPagePath {
+    type Error = MyError;
+
+    fn from_segments(segments: Segments<'r, Path>) -> Result<Self, Self::Error> {
+        let segments: Vec<String> = segments.map(|s| s.to_owned()).collect();
+        Ok(WikiPagePath { segments })
     }
-    return Ok(Response::builder()
-        .status(StatusCode::NOT_FOUND)
-        .body(Body::from(format!("Path not found: {:?}", file_path)))?);
 }
 
-async fn process_request_worker(
-    wiki: &Wiki,
-    req: &Request<Body>,
-) -> Result<Response<Body>, MyError> {
-    let file_path = req.uri().path();
-    info!("start request: {}", file_path);
-
-    let settings = wiki.settings();
-
-    if file_path.ends_with('/') {
-        info!(
-            "Path '{:?}' appears to be a directory, appending {}.md",
-            file_path,
-            settings.index_page()
-        );
-        let mut file_path = file_path.to_owned();
-        file_path += settings.index_page();
-        file_path += ".md";
-        return Ok(Response::builder()
-            .status(StatusCode::FOUND)
-            .header(header::LOCATION, file_path)
-            .body(Body::empty())?);
+impl std::fmt::Display for WikiPagePath {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        if self.segments.is_empty() {
+            write!(f, "/")?;
+        } else {
+            for path in &self.segments {
+                write!(f, "/{}", path)?;
+            }
+        }
+        Ok(())
     }
+}
 
-    if file_path.starts_with("/_smeagol/") {
-        return process_smeagol_request(file_path);
+impl UriDisplay<Path> for WikiPagePath {
+    fn fmt(&self, f: &mut Formatter<Path>) -> Result<(), std::fmt::Error> {
+        for part in &self.segments {
+            f.write_value(part)?;
+        }
+        Ok(())
     }
+}
 
-    match wiki.read_file(file_path) {
-        Ok(bytes) => Ok(process_file_request(wiki, file_path, &bytes).await?),
+impl_from_uri_param_identity!([Path] WikiPagePath);
+
+#[get("/page/<path..>")]
+fn page(path: WikiPagePath, w: Wiki) -> WikiPageResponder {
+    match w.read_file(&path.segments) {
+        Ok(bytes) => {
+            let path_info = path.to_parts().unwrap();
+            match path_info.file_extension {
+                "md" => WikiPageResponder::Content(response::content::Html(
+                    markdown_response(&w, &path_info, &bytes).unwrap(),
+                )),
+                _ => WikiPageResponder::NotFound(response::status::NotFound(format!(
+                    "File extension on this file is not supported: {}",
+                    path
+                ))),
+            }
+        }
         Err(_) => {
-            return Ok(Response::builder()
-                .status(StatusCode::NOT_FOUND)
-                .body(Body::from(format!("Path not found: {:?}", file_path)))?);
+            if w.directory_exists(&path.segments).unwrap() {
+                let mut segments = path.segments;
+                segments.push(format!("{}.md", w.settings().index_page()));
+                let path = WikiPagePath::new(segments);
+                WikiPageResponder::Redirect(response::Redirect::to(uri!(page(path))))
+            } else {
+                WikiPageResponder::NotFound(response::status::NotFound(format!(
+                    "File not found: {}",
+                    path
+                )))
+            }
         }
     }
 }
 
-pub async fn process_request(wiki: Wiki, req: Request<Body>) -> Result<Response<Body>, Infallible> {
-    match process_request_worker(&wiki, &req).await {
-        Ok(res) => Ok(res),
-        Err(err) => Ok(Response::builder()
-            .status(StatusCode::INTERNAL_SERVER_ERROR)
-            .header(header::CONTENT_TYPE, "text/plain; charset=UTF-8")
-            .body(Body::from(format!("Failure processing request: {:?}", err)))
-            .unwrap()),
-    }
+#[get("/")]
+fn index(w: Wiki) -> response::Redirect {
+    let file_name = format!("{}.md", w.settings().index_page());
+    let path = WikiPagePath::new(vec![file_name]);
+    response::Redirect::to(uri!(page(path)))
+}
+
+pub fn build_rocket() -> Rocket<Build> {
+    rocket::build().mount("/", routes![primer_css, page, index])
 }
 
 #[cfg(test)]
@@ -224,36 +250,37 @@ mod tests {
     }
 
     fn assert_request_path_parse(
-        input: &str,
+        input: &[&str],
         expected_file_stem: &str,
         expected_file_extension: &str,
         expected_path_elements: &[&str],
     ) {
-        let parsed =
-            RequestPathParts::parse(input).expect(&format!("Failed to parse request: {}", input));
+        let input: Vec<String> = input.iter().map(|s| s.to_string()).collect();
+        let parsed = RequestPathParts::parse(&input)
+            .expect(&format!("Failed to parse request: {:?}", input));
         assert_eq!(
             expected_file_stem, parsed.file_stem,
-            "Unexpected file_stem while parsing request: {}",
+            "Unexpected file_stem while parsing request: {:?}",
             input
         );
         assert_eq!(
             expected_file_extension, parsed.file_extension,
-            "Unexpected file_extension while parsing request: {}",
+            "Unexpected file_extension while parsing request: {:?}",
             input
         );
         assert_eq!(
             expected_path_elements, parsed.path_elements,
-            "Unexpected path_elements while parsing request: {}",
+            "Unexpected path_elements while parsing request: {:?}",
             input
         );
     }
 
     #[test]
     fn test_request_path_parse() {
-        assert_request_path_parse("/README.md", "README", "md", &[]);
-        assert_request_path_parse("/test/file.txt", "file", "txt", &["test"]);
+        assert_request_path_parse(&["README.md"], "README", "md", &[]);
+        assert_request_path_parse(&["test", "file.txt"], "file", "txt", &["test"]);
         assert_request_path_parse(
-            "/another/thing/to/test.markdown",
+            &["another", "thing", "to", "test.markdown"],
             "test",
             "markdown",
             &["another", "thing", "to"],

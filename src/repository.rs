@@ -9,8 +9,9 @@ pub enum RepositoryItem {
 }
 
 pub trait Repository {
-    fn read_file(&self, file_path: &str) -> Result<Vec<u8>, MyError>;
-    fn enumerate_files(&self, directory: &str) -> Result<Vec<RepositoryItem>, MyError>;
+    fn read_file(&self, file_path: &[String]) -> Result<Vec<u8>, MyError>;
+    fn directory_exists(&self, path: &[String]) -> Result<bool, MyError>;
+    fn enumerate_files(&self, directory: &[String]) -> Result<Vec<RepositoryItem>, MyError>;
 }
 
 struct FileSystemRepository {
@@ -18,13 +19,10 @@ struct FileSystemRepository {
 }
 
 impl FileSystemRepository {
-    fn canonicalize_path(&self, relative_path: &str) -> Result<PathBuf, MyError> {
+    fn canonicalize_path(&self, relative_path: &[String]) -> Result<PathBuf, MyError> {
         let mut path = self.root_dir.to_path_buf();
-        //TODO: decide whether to always require paths to start with the a slash or to always NOT start with a slash
-        if let Some(stripped) = relative_path.strip_prefix('/') {
-            path.push(stripped);
-        } else {
-            path.push(&relative_path);
+        for part in relative_path {
+            path.push(part);
         }
 
         let path = path.canonicalize()?;
@@ -38,7 +36,7 @@ impl FileSystemRepository {
 }
 
 impl Repository for FileSystemRepository {
-    fn read_file(&self, file_path: &str) -> Result<Vec<u8>, MyError> {
+    fn read_file(&self, file_path: &[String]) -> Result<Vec<u8>, MyError> {
         let path = self.canonicalize_path(file_path)?;
         let mut f = std::fs::File::open(path)?;
         let mut buf = Vec::new();
@@ -46,7 +44,15 @@ impl Repository for FileSystemRepository {
         Ok(buf)
     }
 
-    fn enumerate_files(&self, directory: &str) -> Result<Vec<RepositoryItem>, MyError> {
+    // TODO: consider if this should return error for anything
+    fn directory_exists(&self, path: &[String]) -> Result<bool, MyError> {
+        match self.canonicalize_path(path) {
+            Ok(path) => Ok(path.is_dir()),
+            Err(_) => Ok(false),
+        }
+    }
+
+    fn enumerate_files(&self, directory: &[String]) -> Result<Vec<RepositoryItem>, MyError> {
         let path = self.canonicalize_path(directory)?;
 
         // TODO: is there a nicer way to get a String from a file_name()?

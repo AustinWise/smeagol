@@ -1,8 +1,6 @@
-use std::convert::Infallible;
-use std::net::SocketAddr;
+#[macro_use] extern crate rocket;
 
-use hyper::service::{make_service_fn, service_fn};
-use hyper::Server;
+use std::sync::Once;
 
 mod error;
 mod repository;
@@ -11,38 +9,45 @@ mod settings;
 mod templates;
 mod wiki;
 
+use error::MyError;
 use repository::create_file_system_repository;
-use requests::process_request;
 use settings::parse_settings_from_args;
+use wiki::Wiki;
+use requests::build_rocket;
 
-async fn shutdown_signal() {
-    // Wait for the CTRL+C signal
-    tokio::signal::ctrl_c()
-        .await
-        .expect("failed to install CTRL+C signal handler");
-}
+use rocket::request::{Request, FromRequest, Outcome};
 
-#[tokio::main]
-pub async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    pretty_env_logger::init();
+static mut WIKI: Option<Wiki> = None;
+static INIT: Once = Once::new();
 
+fn create_wiki() -> Result<Wiki, MyError> {
     let settings = parse_settings_from_args()?;
     let repo = create_file_system_repository(settings.git_repo().clone())?;
-    let wiki = wiki::Wiki::new(settings, Box::new(repo));
+    Ok(Wiki::new(settings, Box::new(repo)))
+}
 
-    let make_svc = make_service_fn(|_conn| {
-        // TODO: figure out how to give settings a static lifetime so cloning is not needed
-        let wiki = wiki.clone();
-        async { Ok::<_, Infallible>(service_fn(move |req| process_request(wiki.clone(), req))) }
-    });
-    let addr: SocketAddr = ([127, 0, 0, 1], 3000).into();
-    let server = Server::bind(&addr)
-        .serve(make_svc)
-        .with_graceful_shutdown(shutdown_signal());
+fn get_wiki() -> Wiki {
+    unsafe {
+        INIT.call_once(|| {
+            // TODO: do something more useful with the error message
+            WIKI = Some(create_wiki().unwrap());
+        });
+        WIKI.as_ref().unwrap().clone()
+    }
+}
 
-    println!("Listening on http://{}", addr);
+#[rocket::async_trait]
+impl<'r> FromRequest<'r> for Wiki {
+    type Error = MyError;
 
-    server.await?;
+    async fn from_request(_req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+        Outcome::Success(get_wiki())
+    }
+}
 
-    Ok(())
+#[launch]
+fn rocket() -> _ {
+    // observe the panic
+    let _ = get_wiki();
+    build_rocket()
 }

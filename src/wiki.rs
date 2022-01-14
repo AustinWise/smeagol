@@ -27,7 +27,11 @@ impl Wiki {
         &self.0.settings
     }
 
-    pub fn read_file(&self, file_path: &str) -> Result<Vec<u8>, MyError> {
+    pub fn read_file(&self, file_path: &[String]) -> Result<Vec<u8>, MyError> {
         self.0.repository.read_file(file_path)
+    }
+
+    pub fn directory_exists(&self, path: &[String]) -> Result<bool, MyError> {
+        self.0.repository.directory_exists(path)
     }
 }
