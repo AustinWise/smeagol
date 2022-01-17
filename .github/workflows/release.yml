@@ -93,8 +93,8 @@ jobs:
         command: build
         args: --release --target ${{ matrix.target }}
 
-    - name: Strip release binary (linux and macos)
-      if: matrix.os == 'linux' || matrix.os == 'macos'
+    - name: Strip release binary (macos)
+      if: matrix.os == 'macos'
       run: strip "target/${{ matrix.target }}/release/${{ env.PROGRAM_NAME }}"
 
     - name: Build archive
