@@ -1,6 +1,8 @@
 WIP
 ===
 
+* Support for serving files other than Markdown files. [#6](https://github.com/AustinWise/smeagol/issues/6)
+
 0.1.1 (2022-01-12)
 =====
 

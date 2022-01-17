@@ -4,6 +4,7 @@ use rocket::http::uri::fmt::Formatter;
 use rocket::http::uri::fmt::Path;
 use rocket::http::uri::fmt::UriDisplay;
 use rocket::http::uri::Segments;
+use rocket::http::ContentType;
 use rocket::request::FromSegments;
 use rocket::response;
 use rocket::response::content;
@@ -82,11 +83,7 @@ fn markdown_response(
     let title = markdown_page.title().to_owned();
     let rendered_markdown = markdown_page.render_html();
 
-    Ok(render_page(
-        &title,
-        &rendered_markdown,
-        path.path_elements,
-    )?)
+    Ok(render_page(&title, &rendered_markdown, path.path_elements)?)
 }
 
 #[derive(Debug)]
@@ -97,12 +94,13 @@ struct RequestPathParts<'a> {
 }
 
 impl<'a> RequestPathParts<'a> {
-    fn parse(path_elements: &'a [String]) -> Result<Self, MyError> {
-        let (file_name, path_elements) = path_elements.split_last().unwrap();
+    /// Does not support empty paths
+    fn parse(path_elements: &'a [String]) -> Option<Self> {
+        let (file_name, path_elements) = path_elements.split_last()?;
 
         // TODO: support file names without file extensions
-        let (file_stem, file_extension) = file_name.rsplit_once('.').unwrap();
-        Ok(RequestPathParts {
+        let (file_stem, file_extension) = file_name.rsplit_once('.')?;
+        Some(RequestPathParts {
             path_elements,
             file_stem,
             file_extension,
@@ -115,11 +113,13 @@ fn primer_css() -> content::Css<&'static str> {
     content::Css(include_str!("primer.css"))
 }
 
-// Most of the time we are returning Content, so it is ok that it is bigger
+// Most of the time we are returning Page, so it is ok that it is bigger
 #[allow(clippy::large_enum_variant)]
 #[derive(Responder)]
 enum WikiPageResponder {
-    Content(response::content::Html<String>),
+    Page(response::content::Html<String>),
+    File(Vec<u8>),
+    TypedFile(response::content::Custom<Vec<u8>>),
     Redirect(response::Redirect),
     NotFound(response::status::NotFound<String>),
 }
@@ -135,7 +135,7 @@ impl WikiPagePath {
         WikiPagePath { segments }
     }
 
-    fn to_parts(&self) -> Result<RequestPathParts, MyError> {
+    fn to_parts(&self) -> Option<RequestPathParts> {
         RequestPathParts::parse(&self.segments)
     }
 }
@@ -177,15 +177,18 @@ impl_from_uri_param_identity!([Path] WikiPagePath);
 fn page(path: WikiPagePath, w: Wiki) -> WikiPageResponder {
     match w.read_file(&path.segments) {
         Ok(bytes) => {
-            let path_info = path.to_parts().unwrap();
-            match path_info.file_extension {
-                "md" => WikiPageResponder::Content(response::content::Html(
-                    markdown_response(&w, &path_info, &bytes).unwrap(),
-                )),
-                _ => WikiPageResponder::NotFound(response::status::NotFound(format!(
-                    "File extension on this file is not supported: {}",
-                    path
-                ))),
+            let mut file_extension = None;
+            if let Some(path_info) = path.to_parts() {
+                if path_info.file_extension == "md" {
+                    return WikiPageResponder::Page(response::content::Html(
+                        markdown_response(&w, &path_info, &bytes).unwrap(),
+                    ));
+                }
+                file_extension = Some(path_info.file_extension);
+            }
+            match file_extension.and_then(ContentType::from_extension) {
+                Some(ext) => WikiPageResponder::TypedFile(response::content::Custom(ext, bytes)),
+                None => WikiPageResponder::File(bytes),
             }
         }
         Err(_) => {
@@ -285,5 +288,11 @@ mod tests {
             "markdown",
             &["another", "thing", "to"],
         );
+    }
+
+    #[test]
+    fn test_request_path_parse_unsupported() {
+        assert!(RequestPathParts::parse(&[]).is_none());
+        assert!(RequestPathParts::parse(&["README".to_owned()]).is_none());
     }
 }
