@@ -1,4 +1,5 @@
 use pulldown_cmark::{html, Event, HeadingLevel, Options, Parser, Tag};
+use rocket::form::Form;
 use rocket::http::impl_from_uri_param_identity;
 use rocket::http::uri::fmt::Formatter;
 use rocket::http::uri::fmt::Path;
@@ -192,9 +193,15 @@ impl<'r, 'o: 'r> Responder<'r, 'o> for MyError {
     }
 }
 
-#[post("/edit/<path..>")]
-fn edit_save(path: WikiPagePath, w: Wiki) -> String {
-    format!("SAVE NYI: {}", path)
+#[derive(FromForm)]
+struct PageEditForm<'r> {
+    content: &'r str,
+}
+
+#[post("/edit/<path..>", data = "<content>")]
+fn edit_save(path: WikiPagePath, content: Form<PageEditForm<'_>>, w: Wiki) -> Result<response::Redirect, MyError> {
+    w.write_file(&path.segments, content.content)?;
+    Ok(response::Redirect::to(uri!(page(path))))
 }
 
 #[get("/edit/<path..>")]
