@@ -210,7 +210,7 @@ fn edit_view(path: WikiPagePath, w: Wiki) -> Result<response::content::Html<Stri
     let content = std::str::from_utf8(&content)?;
     let post_url = uri!(edit_save(&path));
     let view_url = uri!(page(&path));
-    let path_info = path.to_parts().expect("I'll formed path");
+    let path_info = path.to_parts().expect("Ill-formed path");
     let html = render_edit_page(
         path_info.file_stem,
         &post_url.to_string(),
