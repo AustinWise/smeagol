@@ -204,7 +204,7 @@ fn edit_save(
 
 #[get("/edit/<path..>")]
 fn edit_view(path: WikiPagePath, w: Wiki) -> Result<response::content::Html<String>, MyError> {
-    let content = w.read_file(&path.segments)?;
+    let content = w.read_file(&path.segments).unwrap_or_else(|_| vec![]);
     let content = std::str::from_utf8(&content)?;
     let post_url = uri!(edit_save(&path));
     let view_url = uri!(page(&path));

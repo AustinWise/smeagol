@@ -27,13 +27,11 @@ impl FileSystemRepository {
             path.push(part);
         }
 
-        let path = path.canonicalize()?;
-        if path.starts_with(&self.root_dir) {
-            Ok(path)
-        } else {
-            //TODO: maybe a more specific error?
-            Err(MyError::BadPath)
-        }
+        // TODO: figure out if there is way to check for path traversal attacks
+        //       when creating a new file. std::fs::canonicalize does not work
+        //       for non-existent files.
+        //       Currently we are relying on rocket to canonicalize the path.
+        Ok(path)
     }
 }
 

@@ -1,7 +1,8 @@
 WIP
 ===
 
-* Basic editing support
+* Basic editing support [#16](https://github.com/AustinWise/smeagol/issues/16)
+* When navigating to a non-existent markdown page, show a placeholder that allows creating that page.
 * Support for serving files other than Markdown files. [#6](https://github.com/AustinWise/smeagol/issues/6)
 * Support for specifying which address and port to bind the web server to.
 
