@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate rocket;
 
+mod assets;
 mod error;
 mod repository;
 mod requests;
@@ -10,7 +11,6 @@ mod wiki;
 
 use error::MyError;
 use repository::create_file_system_repository;
-use requests::mount_routes;
 use settings::parse_settings_from_args;
 use wiki::Wiki;
 
@@ -48,5 +48,7 @@ async fn main() -> Result<(), rocket::Error> {
         .merge(("port", WIKI.get().unwrap().settings().port()))
         .merge(("address", WIKI.get().unwrap().settings().host()));
     let rocket = rocket::custom(figment);
-    mount_routes(rocket).ignite().await?.launch().await
+    let rocket = requests::mount_routes(rocket);
+    let rocket = assets::mount_routes(rocket);
+    rocket.ignite().await?.launch().await
 }

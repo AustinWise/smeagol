@@ -5,6 +5,7 @@ WIP
 * When navigating to a non-existent markdown page, show a placeholder that allows creating that page.
 * Support for serving files other than Markdown files. [#6](https://github.com/AustinWise/smeagol/issues/6)
 * Support for specifying which address and port to bind the web server to.
+* Add caching support for static assets. [#18](https://github.com/AustinWise/smeagol/issues/18)
 
 0.1.1 (2022-01-12)
 =====

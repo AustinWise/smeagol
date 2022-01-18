@@ -8,7 +8,6 @@ use rocket::http::uri::Segments;
 use rocket::http::ContentType;
 use rocket::request::FromSegments;
 use rocket::response;
-use rocket::response::content;
 use rocket::response::Responder;
 use rocket::{Build, Rocket};
 
@@ -91,11 +90,6 @@ fn markdown_response(
         &rendered_markdown,
         path.create_breadcrumbs(),
     )?)
-}
-
-#[get("/_smeagol/primer.css")]
-fn primer_css() -> content::Css<&'static str> {
-    content::Css(include_str!("primer.css"))
 }
 
 // Most of the time we are returning Page, so it is ok that it is bigger
@@ -294,7 +288,7 @@ fn index(w: Wiki) -> response::Redirect {
 }
 
 pub fn mount_routes(rocket: Rocket<Build>) -> Rocket<Build> {
-    rocket.mount("/", routes![primer_css, page, edit_save, edit_view, index])
+    rocket.mount("/", routes![page, edit_save, edit_view, index])
 }
 
 #[cfg(test)]

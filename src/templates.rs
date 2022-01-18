@@ -1,5 +1,7 @@
 use askama::Template;
 
+use crate::assets::primer_css_uri;
+
 pub struct Breadcrumb<'a> {
     name: &'a str,
     href: String,
@@ -14,6 +16,7 @@ impl<'a> Breadcrumb<'a> {
 #[derive(Template)]
 #[template(path = "view_page.html", escape = "none")]
 struct ViewPageTemplate<'a> {
+    primer_css_uri: &'a str,
     title: &'a str,
     edit_url: &'a str,
     content: &'a str,
@@ -26,7 +29,9 @@ pub fn render_page(
     content: &str,
     breadcrumbs: Vec<Breadcrumb<'_>>,
 ) -> askama::Result<String> {
+    let primer_css_uri = &primer_css_uri();
     let page = ViewPageTemplate {
+        primer_css_uri,
         title,
         edit_url,
         content,
@@ -39,6 +44,7 @@ pub fn render_page(
 #[derive(Template)]
 #[template(path = "page_placeholder.html")]
 struct PagePlaceholderTemplate<'a> {
+    primer_css_uri: &'a str,
     title: &'a str,
     file_path: &'a str,
     create_url: &'a str,
@@ -51,7 +57,9 @@ pub fn render_page_placeholder(
     create_url: &str,
     breadcrumbs: Vec<Breadcrumb<'_>>,
 ) -> askama::Result<String> {
+    let primer_css_uri = &primer_css_uri();
     let template = PagePlaceholderTemplate {
+        primer_css_uri,
         title,
         file_path,
         create_url,
@@ -64,6 +72,7 @@ pub fn render_page_placeholder(
 #[derive(Template)]
 #[template(path = "edit_page.html")]
 struct EditTemplate<'a> {
+    primer_css_uri: &'a str,
     title: &'a str,
     post_url: &'a str,
     view_url: &'a str,
@@ -78,7 +87,9 @@ pub fn render_edit_page(
     content: &str,
     breadcrumbs: Vec<Breadcrumb<'_>>,
 ) -> askama::Result<String> {
+    let primer_css_uri = &primer_css_uri();
     let template = EditTemplate {
+        primer_css_uri,
         title,
         post_url,
         view_url,
