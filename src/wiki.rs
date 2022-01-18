@@ -5,13 +5,14 @@ use crate::repository::Repository;
 use crate::settings::Settings;
 
 /// Wiki god object.
+#[derive(Debug)]
 struct WikiInner {
     settings: Settings,
     repository: Box<dyn Repository + Send + Sync>,
 }
 
 // TODO: is there are away to share immutable global without the reference counting? A 'static lifetime somehow?
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Wiki(Arc<WikiInner>);
 
 impl Wiki {

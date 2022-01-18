@@ -1,7 +1,5 @@
 #[macro_use] extern crate rocket;
 
-use std::sync::Once;
-
 mod error;
 mod repository;
 mod requests;
@@ -16,9 +14,9 @@ use wiki::Wiki;
 use requests::build_rocket;
 
 use rocket::request::{Request, FromRequest, Outcome};
+use once_cell::sync::OnceCell;
 
-static mut WIKI: Option<Wiki> = None;
-static INIT: Once = Once::new();
+static WIKI : OnceCell<Wiki> = OnceCell::new();
 
 fn create_wiki() -> Result<Wiki, MyError> {
     let settings = parse_settings_from_args()?;
@@ -26,28 +24,26 @@ fn create_wiki() -> Result<Wiki, MyError> {
     Ok(Wiki::new(settings, Box::new(repo)))
 }
 
-fn get_wiki() -> Wiki {
-    unsafe {
-        INIT.call_once(|| {
-            // TODO: do something more useful with the error message
-            WIKI = Some(create_wiki().unwrap());
-        });
-        WIKI.as_ref().unwrap().clone()
-    }
-}
-
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for Wiki {
     type Error = MyError;
 
     async fn from_request(_req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-        Outcome::Success(get_wiki())
+        Outcome::Success(WIKI.get().unwrap().clone())
     }
 }
 
-#[launch]
-fn rocket() -> _ {
-    // observe the panic
-    let _ = get_wiki();
+#[rocket::main]
+async fn main() -> Result<(), rocket::Error> {
+    let wiki = match create_wiki() {
+        Ok(wiki) => wiki,
+        Err(err) => {
+            eprintln!("Failed to create wiki: {}", err);
+            std::process::exit(1);
+        },
+    };
+    WIKI.set(wiki).expect("Failed to set global wiki pointer.");
     build_rocket()
+        .ignite().await?
+        .launch().await
 }

@@ -8,12 +8,13 @@ pub enum RepositoryItem {
     Directory(String),
 }
 
-pub trait Repository {
+pub trait Repository: std::fmt::Debug {
     fn read_file(&self, file_path: &[String]) -> Result<Vec<u8>, MyError>;
     fn directory_exists(&self, path: &[String]) -> Result<bool, MyError>;
     fn enumerate_files(&self, directory: &[String]) -> Result<Vec<RepositoryItem>, MyError>;
 }
 
+#[derive(Debug)]
 struct FileSystemRepository {
     root_dir: PathBuf,
 }
