@@ -1,0 +1,12 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<div class="Box placeholder_page_box">
+    <div class="blankslate-narrow">
+        <h3 class="mb-1">This page does not exist</h3>
+        <p>The file <code>{{file_path}}</code> could not be found.</p>
+        <a class="btn btn-primary my-3" href="{{create_url}}">Create page</a>
+    </div>
+</div>
+
+{% endblock %}

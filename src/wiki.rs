@@ -32,6 +32,10 @@ impl Wiki {
         self.0.repository.read_file(file_path)
     }
 
+    pub fn write_file(&self, file_path: &[String], content: &str) -> Result<(), MyError> {
+        self.0.repository.write_file(file_path, content)
+    }
+
     pub fn directory_exists(&self, path: &[String]) -> Result<bool, MyError> {
         self.0.repository.directory_exists(path)
     }

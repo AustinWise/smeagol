@@ -1,6 +1,7 @@
 WIP
 ===
 
+* Basic editing support
 * Support for serving files other than Markdown files. [#6](https://github.com/AustinWise/smeagol/issues/6)
 * Support for specifying which address and port to bind the web server to.
 

@@ -1,4 +1,4 @@
-use std::{io::Read, path::PathBuf};
+use std::{io::{Read, Write}, path::PathBuf};
 
 use crate::error::MyError;
 
@@ -10,6 +10,7 @@ pub enum RepositoryItem {
 
 pub trait Repository: std::fmt::Debug {
     fn read_file(&self, file_path: &[String]) -> Result<Vec<u8>, MyError>;
+    fn write_file(&self, file_path: &[String], content: &str) -> Result<(), MyError>;
     fn directory_exists(&self, path: &[String]) -> Result<bool, MyError>;
     fn enumerate_files(&self, directory: &[String]) -> Result<Vec<RepositoryItem>, MyError>;
 }
@@ -43,6 +44,14 @@ impl Repository for FileSystemRepository {
         let mut buf = Vec::new();
         f.read_to_end(&mut buf)?;
         Ok(buf)
+    }
+
+    fn write_file(&self, file_path: &[String], content: &str) -> Result<(), MyError> {
+        let path = self.canonicalize_path(file_path)?;
+        let mut f = std::fs::File::create(path)?;
+        f.write_all(content.as_bytes())?;
+        f.flush()?;
+        Ok(())
     }
 
     // TODO: consider if this should return error for anything
