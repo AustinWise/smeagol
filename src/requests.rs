@@ -14,7 +14,7 @@ use rocket::{Build, Rocket};
 
 use crate::error::MyError;
 use crate::settings::Settings;
-use crate::templates::{render_edit_page, render_page, render_page_placeholder};
+use crate::templates::{render_edit_page, render_page, render_page_placeholder, Breadcrumb};
 use crate::wiki::Wiki;
 
 struct MarkdownPage<'a> {
@@ -89,7 +89,7 @@ fn markdown_response(
         &title,
         edit_url,
         &rendered_markdown,
-        path.directories(),
+        path.create_breadcrumbs(),
     )?)
 }
 
@@ -120,6 +120,12 @@ impl<'r> WikiPagePath<'r> {
         WikiPagePath { segments }
     }
 
+    fn from_slice(segments: &[&'r str]) -> Self {
+        WikiPagePath {
+            segments: segments.iter().copied().collect(),
+        }
+    }
+
     fn directories(&self) -> &[&'r str] {
         match self.segments.split_last() {
             Some((_, dirs)) => dirs,
@@ -138,6 +144,19 @@ impl<'r> WikiPagePath<'r> {
 
     fn file_extension(&self) -> Option<&str> {
         Some(self.file_name_and_extension()?.1)
+    }
+
+    fn create_breadcrumbs(&self) -> Vec<Breadcrumb<'r>> {
+        let mut dirs = self.directories();
+        let mut ret = Vec::with_capacity(dirs.len());
+        while let Some((name, next_dirs)) = dirs.split_last() {
+            let url = uri!(page(WikiPagePath::from_slice(dirs))).to_string();
+            ret.push(Breadcrumb::new(name, url));
+            dirs = next_dirs;
+        }
+        //TODO: put the elements in the list in the correct order
+        ret.reverse();
+        ret
     }
 }
 
@@ -213,7 +232,7 @@ fn edit_view(path: WikiPagePath, w: Wiki) -> Result<response::content::Html<Stri
         &post_url.to_string(),
         &view_url.to_string(),
         content,
-        path.directories(),
+        path.create_breadcrumbs(),
     )?;
     Ok(response::content::Html(html))
 }
@@ -238,7 +257,7 @@ fn page(path: WikiPagePath, w: Wiki) -> WikiPageResponder {
             if w.directory_exists(&path.segments).unwrap() {
                 let mut segments = path.segments;
                 let file_name = &format!("{}.md", w.settings().index_page());
-                segments.push(&file_name);
+                segments.push(file_name);
                 let path = WikiPagePath::new(segments);
                 WikiPageResponder::Redirect(response::Redirect::to(uri!(page(path))))
             } else {
@@ -251,7 +270,7 @@ fn page(path: WikiPagePath, w: Wiki) -> WikiPageResponder {
                                     file_stem,
                                     &path.to_string(),
                                     &create_url.to_string(),
-                                    path.directories(),
+                                    path.create_breadcrumbs(),
                                 )
                                 .unwrap(),
                             ),
@@ -318,8 +337,7 @@ mod tests {
         expected_file_extension: &str,
         expected_path_elements: &[&str],
     ) {
-        let parsed: Vec<&str> = input.iter().map(|s|*s).collect();
-        let parsed = WikiPagePath::new(parsed);
+        let parsed = WikiPagePath::from_slice(input);
         assert_eq!(
             Some(expected_file_stem),
             parsed.file_name(),

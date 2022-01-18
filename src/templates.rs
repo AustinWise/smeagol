@@ -1,23 +1,13 @@
 use askama::Template;
 
-struct Breadcrumb<'a> {
+pub struct Breadcrumb<'a> {
     name: &'a str,
     href: String,
 }
 
 impl<'a> Breadcrumb<'a> {
-    fn from_elements(path_elements: &'a [&str]) -> Vec<Self> {
-        let mut breadcrumbs = Vec::with_capacity(path_elements.len());
-        let mut href: String = "/".into();
-        for el in path_elements {
-            href += el;
-            href += "/";
-            breadcrumbs.push(Breadcrumb {
-                name: el,
-                href: href.clone(),
-            });
-        }
-        breadcrumbs
+    pub fn new(name: &'a str, href: String) -> Self {
+        Self { name, href }
     }
 }
 
@@ -34,9 +24,8 @@ pub fn render_page(
     title: &str,
     edit_url: &str,
     content: &str,
-    path_elements: &[&str],
+    breadcrumbs: Vec<Breadcrumb<'_>>,
 ) -> askama::Result<String> {
-    let breadcrumbs = Breadcrumb::from_elements(path_elements);
     let page = ViewPageTemplate {
         title,
         edit_url,
@@ -60,9 +49,8 @@ pub fn render_page_placeholder(
     title: &str,
     file_path: &str,
     create_url: &str,
-    path_elements: &[&str],
+    breadcrumbs: Vec<Breadcrumb<'_>>,
 ) -> askama::Result<String> {
-    let breadcrumbs = Breadcrumb::from_elements(path_elements);
     let template = PagePlaceholderTemplate {
         title,
         file_path,
@@ -88,9 +76,8 @@ pub fn render_edit_page(
     post_url: &str,
     view_url: &str,
     content: &str,
-    path_elements: &[&str],
+    breadcrumbs: Vec<Breadcrumb<'_>>,
 ) -> askama::Result<String> {
-    let breadcrumbs = Breadcrumb::from_elements(path_elements);
     let template = EditTemplate {
         title,
         post_url,
