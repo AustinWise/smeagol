@@ -13,7 +13,6 @@
 
 <body class="container-lg">
     <header>
-
     </header>
     <main>
         <div class="TableObject pt-4 px-2 px-lg-0 overflow-x-scroll">
@@ -33,8 +32,8 @@
                 {% endfor %}
             </ol>
         </nav>
-        <div class="markdown-body">
-            {{content}}
+        <div class="main-content">
+            {% block content %}{% endblock %}
         </div>
     </main>
 

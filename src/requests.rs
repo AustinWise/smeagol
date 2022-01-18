@@ -13,7 +13,7 @@ use rocket::{Build, Rocket};
 
 use crate::error::MyError;
 use crate::settings::Settings;
-use crate::templates::render_page;
+use crate::templates::{render_page, render_page_placeholder};
 use crate::wiki::Wiki;
 
 struct MarkdownPage<'a> {
@@ -122,6 +122,7 @@ enum WikiPageResponder {
     TypedFile(response::content::Custom<Vec<u8>>),
     Redirect(response::Redirect),
     NotFound(response::status::NotFound<String>),
+    PagePlaceholder(response::status::NotFound<response::content::Html<String>>),
 }
 
 #[derive(Debug)]
@@ -173,6 +174,11 @@ impl UriDisplay<Path> for WikiPagePath {
 
 impl_from_uri_param_identity!([Path] WikiPagePath);
 
+#[get("/edit/<path..>")]
+fn edit(path: WikiPagePath, w: Wiki) -> String {
+    format!("EDIT NYI: {}", path)
+}
+
 #[get("/page/<path..>")]
 fn page(path: WikiPagePath, w: Wiki) -> WikiPageResponder {
     match w.read_file(&path.segments) {
@@ -198,6 +204,22 @@ fn page(path: WikiPagePath, w: Wiki) -> WikiPageResponder {
                 let path = WikiPagePath::new(segments);
                 WikiPageResponder::Redirect(response::Redirect::to(uri!(page(path))))
             } else {
+                if let Some(path_info) = path.to_parts() {
+                    if path_info.file_extension == "md" {
+                        let create_url = uri!(edit(&path));
+                        return WikiPageResponder::PagePlaceholder(response::status::NotFound(
+                            response::content::Html(
+                                render_page_placeholder(
+                                    path_info.file_stem,
+                                    &path.to_string(),
+                                    &create_url.to_string(),
+                                    path_info.path_elements,
+                                )
+                                .unwrap(),
+                            ),
+                        ));
+                    }
+                }
                 WikiPageResponder::NotFound(response::status::NotFound(format!(
                     "File not found: {}",
                     path
@@ -215,7 +237,7 @@ fn index(w: Wiki) -> response::Redirect {
 }
 
 pub fn mount_routes(rocket: Rocket<Build>) -> Rocket<Build> {
-    rocket.mount("/", routes![primer_css, page, index])
+    rocket.mount("/", routes![primer_css, page, edit, index])
 }
 
 #[cfg(test)]
