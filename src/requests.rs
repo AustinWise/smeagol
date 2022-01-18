@@ -214,8 +214,8 @@ fn index(w: Wiki) -> response::Redirect {
     response::Redirect::to(uri!(page(path)))
 }
 
-pub fn build_rocket() -> Rocket<Build> {
-    rocket::build().mount("/", routes![primer_css, page, index])
+pub fn mount_routes(rocket: Rocket<Build>) -> Rocket<Build> {
+    rocket.mount("/", routes![primer_css, page, index])
 }
 
 #[cfg(test)]

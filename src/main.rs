@@ -1,4 +1,5 @@
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 mod error;
 mod repository;
@@ -9,14 +10,14 @@ mod wiki;
 
 use error::MyError;
 use repository::create_file_system_repository;
+use requests::mount_routes;
 use settings::parse_settings_from_args;
 use wiki::Wiki;
-use requests::build_rocket;
 
-use rocket::request::{Request, FromRequest, Outcome};
 use once_cell::sync::OnceCell;
+use rocket::request::{FromRequest, Outcome, Request};
 
-static WIKI : OnceCell<Wiki> = OnceCell::new();
+static WIKI: OnceCell<Wiki> = OnceCell::new();
 
 fn create_wiki() -> Result<Wiki, MyError> {
     let settings = parse_settings_from_args()?;
@@ -40,10 +41,12 @@ async fn main() -> Result<(), rocket::Error> {
         Err(err) => {
             eprintln!("Failed to create wiki: {}", err);
             std::process::exit(1);
-        },
+        }
     };
     WIKI.set(wiki).expect("Failed to set global wiki pointer.");
-    build_rocket()
-        .ignite().await?
-        .launch().await
+    let figment = rocket::Config::figment()
+        .merge(("port", WIKI.get().unwrap().settings().port()))
+        .merge(("address", WIKI.get().unwrap().settings().host()));
+    let rocket = rocket::custom(figment);
+    mount_routes(rocket).ignite().await?.launch().await
 }

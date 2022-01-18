@@ -1,5 +1,6 @@
 use std::default::Default;
 use std::fs::canonicalize;
+use std::net::{IpAddr, Ipv4Addr};
 use std::path::{Path, PathBuf};
 
 use clap::Parser;
@@ -13,6 +14,12 @@ struct Args {
     /// Path to the directory containing the wiki Git repository.
     #[clap(parse(from_os_str))]
     git_repo: Option<PathBuf>,
+    /// The IP address to bind to. Defaults to 127.0.0.1
+    #[clap(long)]
+    host: Option<IpAddr>,
+    /// The TCP Port to bind to. Defaults to 8000
+    #[clap(long)]
+    port: Option<u16>,
 }
 
 #[derive(Default, Deserialize)]
@@ -28,6 +35,8 @@ pub struct Settings {
     git_repo: PathBuf,
     index_page: String,
     h1_title: bool,
+    host: IpAddr,
+    port: u16,
 }
 
 impl Settings {
@@ -37,17 +46,29 @@ impl Settings {
             git_repo: PathBuf::new(),
             index_page: index_page.to_owned(),
             h1_title,
+            host: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+            port: 8000,
         }
     }
 
     pub fn git_repo(&self) -> &PathBuf {
         &self.git_repo
     }
+
     pub fn index_page(&self) -> &str {
         &self.index_page
     }
+
     pub fn h1_title(&self) -> bool {
         self.h1_title
+    }
+
+    pub fn host(&self) -> IpAddr {
+        self.host
+    }
+
+    pub fn port(&self) -> u16 {
+        self.port
     }
 }
 
@@ -84,6 +105,10 @@ pub fn parse_settings_from_args() -> Result<Settings, MyError> {
         git_repo,
         index_page: config.index_page.unwrap_or_else(|| "Home".into()),
         h1_title: config.h1_title.unwrap_or(false),
+        host: args
+            .host
+            .unwrap_or_else(|| IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
+        port: args.port.unwrap_or(8000),
     };
     Ok(ret)
 }
