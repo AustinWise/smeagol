@@ -111,17 +111,16 @@ enum WikiPageResponder {
 }
 
 #[derive(Debug)]
-struct WikiPagePath {
-    //TODO: maybe don't copy all the strings...
-    segments: Vec<String>,
+struct WikiPagePath<'r> {
+    segments: Vec<&'r str>,
 }
 
-impl WikiPagePath {
-    fn new(segments: Vec<String>) -> Self {
+impl<'r> WikiPagePath<'r> {
+    fn new(segments: Vec<&'r str>) -> Self {
         WikiPagePath { segments }
     }
 
-    fn directories(&self) -> &[String] {
+    fn directories(&self) -> &[&'r str] {
         match self.segments.split_last() {
             Some((_, dirs)) => dirs,
             None => &[],
@@ -142,16 +141,16 @@ impl WikiPagePath {
     }
 }
 
-impl<'r> FromSegments<'r> for WikiPagePath {
+impl<'r> FromSegments<'r> for WikiPagePath<'r> {
     type Error = MyError;
 
     fn from_segments(segments: Segments<'r, Path>) -> Result<Self, Self::Error> {
-        let segments: Vec<String> = segments.map(|s| s.to_owned()).collect();
+        let segments: Vec<&'r str> = segments.collect();
         Ok(WikiPagePath { segments })
     }
 }
 
-impl std::fmt::Display for WikiPagePath {
+impl<'r> std::fmt::Display for WikiPagePath<'r> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         if self.segments.is_empty() {
             write!(f, "/")?;
@@ -164,7 +163,7 @@ impl std::fmt::Display for WikiPagePath {
     }
 }
 
-impl UriDisplay<Path> for WikiPagePath {
+impl<'r> UriDisplay<Path> for WikiPagePath<'r> {
     fn fmt(&self, f: &mut Formatter<Path>) -> Result<(), std::fmt::Error> {
         for part in &self.segments {
             f.write_value(part)?;
@@ -173,7 +172,7 @@ impl UriDisplay<Path> for WikiPagePath {
     }
 }
 
-impl_from_uri_param_identity!([Path] WikiPagePath);
+impl_from_uri_param_identity!([Path] ('r) WikiPagePath<'r>);
 
 // TODO: is the an easier way to convert an Error into a 500?
 impl<'r, 'o: 'r> Responder<'r, 'o> for MyError {
@@ -238,7 +237,8 @@ fn page(path: WikiPagePath, w: Wiki) -> WikiPageResponder {
         Err(_) => {
             if w.directory_exists(&path.segments).unwrap() {
                 let mut segments = path.segments;
-                segments.push(format!("{}.md", w.settings().index_page()));
+                let file_name = &format!("{}.md", w.settings().index_page());
+                segments.push(&file_name);
                 let path = WikiPagePath::new(segments);
                 WikiPageResponder::Redirect(response::Redirect::to(uri!(page(path))))
             } else {
@@ -270,7 +270,7 @@ fn page(path: WikiPagePath, w: Wiki) -> WikiPageResponder {
 #[get("/")]
 fn index(w: Wiki) -> response::Redirect {
     let file_name = format!("{}.md", w.settings().index_page());
-    let path = WikiPagePath::new(vec![file_name]);
+    let path = WikiPagePath::new(vec![&file_name]);
     response::Redirect::to(uri!(page(path)))
 }
 
@@ -313,13 +313,13 @@ mod tests {
     }
 
     fn assert_request_path_parse(
-        input: &[&str],
+        input: &[&'static str],
         expected_file_stem: &str,
         expected_file_extension: &str,
         expected_path_elements: &[&str],
     ) {
-        let input: Vec<String> = input.iter().map(|s| s.to_string()).collect();
-        let parsed = WikiPagePath::new(input.iter().map(|s| s.to_owned()).collect());
+        let parsed: Vec<&str> = input.iter().map(|s|*s).collect();
+        let parsed = WikiPagePath::new(parsed);
         assert_eq!(
             Some(expected_file_stem),
             parsed.file_name(),
@@ -358,7 +358,7 @@ mod tests {
         assert!(empty.directories().is_empty());
         assert!(empty.file_name_and_extension().is_none());
 
-        let extensionless_file = WikiPagePath::new(vec!["README".to_owned()]);
+        let extensionless_file = WikiPagePath::new(vec!["README"]);
         assert!(extensionless_file.directories().is_empty());
         assert!(extensionless_file.file_name_and_extension().is_none());
     }

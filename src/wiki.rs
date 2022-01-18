@@ -28,15 +28,15 @@ impl Wiki {
         &self.0.settings
     }
 
-    pub fn read_file(&self, file_path: &[String]) -> Result<Vec<u8>, MyError> {
+    pub fn read_file(&self, file_path: &[&str]) -> Result<Vec<u8>, MyError> {
         self.0.repository.read_file(file_path)
     }
 
-    pub fn write_file(&self, file_path: &[String], content: &str) -> Result<(), MyError> {
+    pub fn write_file(&self, file_path: &[&str], content: &str) -> Result<(), MyError> {
         self.0.repository.write_file(file_path, content)
     }
 
-    pub fn directory_exists(&self, path: &[String]) -> Result<bool, MyError> {
+    pub fn directory_exists(&self, path: &[&str]) -> Result<bool, MyError> {
         self.0.repository.directory_exists(path)
     }
 }

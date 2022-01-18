@@ -4,8 +4,6 @@ use thiserror::Error;
 pub enum MyError {
     #[error("Git repo does not exist.")]
     GitRepoDoesNotExist,
-    #[error("bad path")]
-    BadPath,
     #[error("io error")]
     Io {
         #[from]

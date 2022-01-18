@@ -6,7 +6,7 @@ struct Breadcrumb<'a> {
 }
 
 impl<'a> Breadcrumb<'a> {
-    fn from_elements(path_elements: &'a [String]) -> Vec<Self> {
+    fn from_elements(path_elements: &'a [&str]) -> Vec<Self> {
         let mut breadcrumbs = Vec::with_capacity(path_elements.len());
         let mut href: String = "/".into();
         for el in path_elements {
@@ -34,7 +34,7 @@ pub fn render_page(
     title: &str,
     edit_url: &str,
     content: &str,
-    path_elements: &[String],
+    path_elements: &[&str],
 ) -> askama::Result<String> {
     let breadcrumbs = Breadcrumb::from_elements(path_elements);
     let page = ViewPageTemplate {
@@ -60,7 +60,7 @@ pub fn render_page_placeholder(
     title: &str,
     file_path: &str,
     create_url: &str,
-    path_elements: &[String],
+    path_elements: &[&str],
 ) -> askama::Result<String> {
     let breadcrumbs = Breadcrumb::from_elements(path_elements);
     let template = PagePlaceholderTemplate {
@@ -88,7 +88,7 @@ pub fn render_edit_page(
     post_url: &str,
     view_url: &str,
     content: &str,
-    path_elements: &[String],
+    path_elements: &[&str],
 ) -> askama::Result<String> {
     let breadcrumbs = Breadcrumb::from_elements(path_elements);
     let template = EditTemplate {
