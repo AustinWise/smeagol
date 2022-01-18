@@ -25,14 +25,21 @@ impl<'a> Breadcrumb<'a> {
 #[template(path = "view_page.html", escape = "none")]
 struct ViewPageTemplate<'a> {
     title: &'a str,
+    edit_url: &'a str,
     content: &'a str,
     breadcrumbs: Vec<Breadcrumb<'a>>,
 }
 
-pub fn render_page(title: &str, content: &str, path_elements: &[String]) -> askama::Result<String> {
+pub fn render_page(
+    title: &str,
+    edit_url: &str,
+    content: &str,
+    path_elements: &[String],
+) -> askama::Result<String> {
     let breadcrumbs = Breadcrumb::from_elements(path_elements);
     let page = ViewPageTemplate {
         title,
+        edit_url,
         content,
         breadcrumbs,
     };
@@ -60,6 +67,35 @@ pub fn render_page_placeholder(
         title,
         file_path,
         create_url,
+        breadcrumbs,
+    };
+    template.render()
+}
+
+//NOTE: this MUST escape the content so it displays correctly in the textarea
+#[derive(Template)]
+#[template(path = "edit_page.html")]
+struct EditTemplate<'a> {
+    title: &'a str,
+    post_url: &'a str,
+    view_url: &'a str,
+    content: &'a str,
+    breadcrumbs: Vec<Breadcrumb<'a>>,
+}
+
+pub fn render_edit_page(
+    title: &str,
+    post_url: &str,
+    view_url: &str,
+    content: &str,
+    path_elements: &[String],
+) -> askama::Result<String> {
+    let breadcrumbs = Breadcrumb::from_elements(path_elements);
+    let template = EditTemplate {
+        title,
+        post_url,
+        view_url,
+        content,
         breadcrumbs,
     };
     template.render()

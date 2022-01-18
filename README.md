@@ -23,3 +23,10 @@ to `gem install` on a low-powered Chromebook.
 Rust makes it easy to ship cross-compiled executables that run without much fuss.
 As for why not some other language also shares this capability (Go or C#),
 I just want to get more experience working with Rust.
+
+## License
+
+Licensed under the [MIT License](LICENSE).
+
+Note that some elements, specifically aspects of the visual design,
+have been copied from [Gollum](https://github.com/gollum/gollum).

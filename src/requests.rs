@@ -13,7 +13,7 @@ use rocket::{Build, Rocket};
 
 use crate::error::MyError;
 use crate::settings::Settings;
-use crate::templates::{render_page, render_page_placeholder};
+use crate::templates::{render_edit_page, render_page, render_page_placeholder};
 use crate::wiki::Wiki;
 
 struct MarkdownPage<'a> {
@@ -73,6 +73,7 @@ impl<'a> MarkdownPage<'a> {
 
 fn markdown_response(
     wiki: &Wiki,
+    edit_url: &str,
     path: &RequestPathParts,
     bytes: &[u8],
 ) -> Result<String, MyError> {
@@ -83,7 +84,12 @@ fn markdown_response(
     let title = markdown_page.title().to_owned();
     let rendered_markdown = markdown_page.render_html();
 
-    Ok(render_page(&title, &rendered_markdown, path.path_elements)?)
+    Ok(render_page(
+        &title,
+        edit_url,
+        &rendered_markdown,
+        path.path_elements,
+    )?)
 }
 
 #[derive(Debug)]
@@ -174,9 +180,38 @@ impl UriDisplay<Path> for WikiPagePath {
 
 impl_from_uri_param_identity!([Path] WikiPagePath);
 
+// TODO: is the an easier way to convert an Error into a 500?
+impl<'r, 'o: 'r> Responder<'r, 'o> for MyError {
+    fn respond_to(self, _request: &'r rocket::Request<'_>) -> rocket::response::Result<'o> {
+        let str = format!("server error: {:?}", self);
+        rocket::Response::build()
+            .header(ContentType::Plain)
+            .status(rocket::http::Status::InternalServerError)
+            .sized_body(str.len(), std::io::Cursor::new(str))
+            .ok()
+    }
+}
+
+#[post("/edit/<path..>")]
+fn edit_save(path: WikiPagePath, w: Wiki) -> String {
+    format!("SAVE NYI: {}", path)
+}
+
 #[get("/edit/<path..>")]
-fn edit(path: WikiPagePath, w: Wiki) -> String {
-    format!("EDIT NYI: {}", path)
+fn edit_view(path: WikiPagePath, w: Wiki) -> Result<response::content::Html<String>, MyError> {
+    let content = w.read_file(&path.segments)?;
+    let content = std::str::from_utf8(&content)?;
+    let post_url = uri!(edit_save(&path));
+    let view_url = uri!(page(&path));
+    let path_info = path.to_parts().expect("I'll formed path");
+    let html = render_edit_page(
+        path_info.file_stem,
+        &post_url.to_string(),
+        &view_url.to_string(),
+        content,
+        path_info.path_elements,
+    )?;
+    Ok(response::content::Html(html))
 }
 
 #[get("/page/<path..>")]
@@ -186,8 +221,9 @@ fn page(path: WikiPagePath, w: Wiki) -> WikiPageResponder {
             let mut file_extension = None;
             if let Some(path_info) = path.to_parts() {
                 if path_info.file_extension == "md" {
+                    let edit_url = uri!(edit_view(&path)).to_string();
                     return WikiPageResponder::Page(response::content::Html(
-                        markdown_response(&w, &path_info, &bytes).unwrap(),
+                        markdown_response(&w, &edit_url, &path_info, &bytes).unwrap(),
                     ));
                 }
                 file_extension = Some(path_info.file_extension);
@@ -206,7 +242,7 @@ fn page(path: WikiPagePath, w: Wiki) -> WikiPageResponder {
             } else {
                 if let Some(path_info) = path.to_parts() {
                     if path_info.file_extension == "md" {
-                        let create_url = uri!(edit(&path));
+                        let create_url = uri!(edit_view(&path));
                         return WikiPageResponder::PagePlaceholder(response::status::NotFound(
                             response::content::Html(
                                 render_page_placeholder(
@@ -237,7 +273,7 @@ fn index(w: Wiki) -> response::Redirect {
 }
 
 pub fn mount_routes(rocket: Rocket<Build>) -> Rocket<Build> {
-    rocket.mount("/", routes![primer_css, page, edit, index])
+    rocket.mount("/", routes![primer_css, page, edit_save, edit_view, index])
 }
 
 #[cfg(test)]

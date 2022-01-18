@@ -1,0 +1,21 @@
+{% extends "layout.html" %}
+
+
+
+{% block content %}
+
+<form method="post" action="{{post_url}}">
+    <div class="tabnav">
+        <nav class="tabnav-tabs edit_box_tabs" aria-label="Page editor">
+            <a class="tabnav-tab" href="#url" aria-current="page">Edit file</a>
+            <!-- <a class="tabnav-tab" href="#url">Preview</a> -->
+        </nav>
+        <div class="Box edit_box">
+            <textarea class="edit_text_area">{{content}}</textarea>
+        </div>
+    </div>
+    <button type="submit" class="btn btn-primary">Commit changes</button>
+    <a href="{{view_url}}" class="btn btn-danger">Cancel</a>
+</form>
+
+{% endblock %}

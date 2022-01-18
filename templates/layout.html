@@ -8,29 +8,56 @@
         main {
             padding: 0 1em 0 1em;
         }
+
         .markdown-body {
             padding: 1em 1em 1em 0;
         }
+
         .placeholder_page_box {
             text-align: center;
             margin: auto;
             width: 50%;
             padding: 1em;
         }
+
+        .edit_box {
+            display: flex;
+            box-sizing: border-box;
+        }
+
+        .edit_box_tabs {
+            margin-left: 6px;
+        }
+
+        .edit_box textarea {
+            margin: 1em;
+            font-family: monospace;
+            width: 100%;
+            min-height: 500px;
+        }
     </style>
 </head>
 
 <body class="container-lg">
     <header>
-    </header>
-    <main>
         <div class="TableObject pt-4 px-2 px-lg-0 overflow-x-scroll">
             <div class="TableObject-item">
                 <a class="btn btn-sm" id="minibutton-home" href="/">
                     Home
                 </a>
             </div>
+            <div class="TableObject-item TableObject-item--primary px-2">
+                <!--
+                <form class="search-form" action="/search" method="get" id="search-form">
+                    <input type="text" class="form-control input-block" name="q" id="search-query" placeholder="Search"
+                        aria-label="Search site" autocomplete="off">
+                </form>
+                -->
+            </div>
+            {% block page_view_controls %}{% endblock %}
         </div>
+    </header>
+    <main>
         <h1 class="pt-4">{{title}}</h1>
         <nav aria-label="Breadcrumb">
             <ol>

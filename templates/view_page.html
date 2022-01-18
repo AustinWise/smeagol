@@ -1,4 +1,27 @@
 {% extends "layout.html" %}
+
+{% block page_view_controls %}
+<div class="TableObject-item px-2">
+    <div class="BtnGroup d-flex">
+        <!--
+        <a class="btn BtnGroup-item btn-sm hide-sm hide-md" href="#"
+            id="minibutton-history">
+            History
+        </a>
+        <button class="btn BtnGroup-item btn-sm hide-sm hide-md
+              minibutton-rename-page">
+            Rename
+        </button>
+        -->
+        <a class="btn BtnGroup-item btn-sm hide-sm hide-md" href="{{edit_url}}"
+            id="minibutton-edit-page">
+            Edit
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+
 {% block content %}
 
 <div class="markdown-body">
