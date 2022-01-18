@@ -75,12 +75,12 @@ impl<'a> MarkdownPage<'a> {
 fn markdown_response(
     wiki: &Wiki,
     edit_url: &str,
-    path: &RequestPathParts,
+    path: &WikiPagePath,
     bytes: &[u8],
 ) -> Result<String, MyError> {
     let markdown_input = std::str::from_utf8(bytes)?;
     let settings = wiki.settings();
-    let markdown_page = MarkdownPage::new(settings, path.file_stem, markdown_input);
+    let markdown_page = MarkdownPage::new(settings, path.file_name().unwrap(), markdown_input);
 
     let title = markdown_page.title().to_owned();
     let rendered_markdown = markdown_page.render_html();
@@ -89,30 +89,8 @@ fn markdown_response(
         &title,
         edit_url,
         &rendered_markdown,
-        path.path_elements,
+        path.directories(),
     )?)
-}
-
-#[derive(Debug)]
-struct RequestPathParts<'a> {
-    pub path_elements: &'a [String],
-    pub file_stem: &'a str,
-    pub file_extension: &'a str,
-}
-
-impl<'a> RequestPathParts<'a> {
-    /// Does not support empty paths
-    fn parse(path_elements: &'a [String]) -> Option<Self> {
-        let (file_name, path_elements) = path_elements.split_last()?;
-
-        // TODO: support file names without file extensions
-        let (file_stem, file_extension) = file_name.rsplit_once('.')?;
-        Some(RequestPathParts {
-            path_elements,
-            file_stem,
-            file_extension,
-        })
-    }
 }
 
 #[get("/_smeagol/primer.css")]
@@ -143,8 +121,24 @@ impl WikiPagePath {
         WikiPagePath { segments }
     }
 
-    fn to_parts(&self) -> Option<RequestPathParts> {
-        RequestPathParts::parse(&self.segments)
+    fn directories(&self) -> &[String] {
+        match self.segments.split_last() {
+            Some((_, dirs)) => dirs,
+            None => &[],
+        }
+    }
+
+    fn file_name_and_extension(&self) -> Option<(&str, &str)> {
+        let (file_name, _) = self.segments.split_last()?;
+        file_name.rsplit_once('.')
+    }
+
+    fn file_name(&self) -> Option<&str> {
+        Some(self.file_name_and_extension()?.0)
+    }
+
+    fn file_extension(&self) -> Option<&str> {
+        Some(self.file_name_and_extension()?.1)
     }
 }
 
@@ -199,7 +193,11 @@ struct PageEditForm<'r> {
 }
 
 #[post("/edit/<path..>", data = "<content>")]
-fn edit_save(path: WikiPagePath, content: Form<PageEditForm<'_>>, w: Wiki) -> Result<response::Redirect, MyError> {
+fn edit_save(
+    path: WikiPagePath,
+    content: Form<PageEditForm<'_>>,
+    w: Wiki,
+) -> Result<response::Redirect, MyError> {
     w.write_file(&path.segments, content.content)?;
     Ok(response::Redirect::to(uri!(page(path))))
 }
@@ -210,13 +208,13 @@ fn edit_view(path: WikiPagePath, w: Wiki) -> Result<response::content::Html<Stri
     let content = std::str::from_utf8(&content)?;
     let post_url = uri!(edit_save(&path));
     let view_url = uri!(page(&path));
-    let path_info = path.to_parts().expect("Ill-formed path");
+    let file_stem = path.file_name().expect("Ill-formed path");
     let html = render_edit_page(
-        path_info.file_stem,
+        file_stem,
         &post_url.to_string(),
         &view_url.to_string(),
         content,
-        path_info.path_elements,
+        path.directories(),
     )?;
     Ok(response::content::Html(html))
 }
@@ -225,15 +223,12 @@ fn edit_view(path: WikiPagePath, w: Wiki) -> Result<response::content::Html<Stri
 fn page(path: WikiPagePath, w: Wiki) -> WikiPageResponder {
     match w.read_file(&path.segments) {
         Ok(bytes) => {
-            let mut file_extension = None;
-            if let Some(path_info) = path.to_parts() {
-                if path_info.file_extension == "md" {
-                    let edit_url = uri!(edit_view(&path)).to_string();
-                    return WikiPageResponder::Page(response::content::Html(
-                        markdown_response(&w, &edit_url, &path_info, &bytes).unwrap(),
-                    ));
-                }
-                file_extension = Some(path_info.file_extension);
+            let file_extension = path.file_extension();
+            if file_extension == Some("md") {
+                let edit_url = uri!(edit_view(&path)).to_string();
+                return WikiPageResponder::Page(response::content::Html(
+                    markdown_response(&w, &edit_url, &path, &bytes).unwrap(),
+                ));
             }
             match file_extension.and_then(ContentType::from_extension) {
                 Some(ext) => WikiPageResponder::TypedFile(response::content::Custom(ext, bytes)),
@@ -247,26 +242,26 @@ fn page(path: WikiPagePath, w: Wiki) -> WikiPageResponder {
                 let path = WikiPagePath::new(segments);
                 WikiPageResponder::Redirect(response::Redirect::to(uri!(page(path))))
             } else {
-                if let Some(path_info) = path.to_parts() {
-                    if path_info.file_extension == "md" {
+                match path.file_name_and_extension() {
+                    Some((file_stem, "md")) => {
                         let create_url = uri!(edit_view(&path));
-                        return WikiPageResponder::PagePlaceholder(response::status::NotFound(
+                        WikiPageResponder::PagePlaceholder(response::status::NotFound(
                             response::content::Html(
                                 render_page_placeholder(
-                                    path_info.file_stem,
+                                    file_stem,
                                     &path.to_string(),
                                     &create_url.to_string(),
-                                    path_info.path_elements,
+                                    path.directories(),
                                 )
                                 .unwrap(),
                             ),
-                        ));
+                        ))
                     }
+                    _ => WikiPageResponder::NotFound(response::status::NotFound(format!(
+                        "File not found: {}",
+                        path
+                    ))),
                 }
-                WikiPageResponder::NotFound(response::status::NotFound(format!(
-                    "File not found: {}",
-                    path
-                )))
             }
         }
     }
@@ -324,20 +319,22 @@ mod tests {
         expected_path_elements: &[&str],
     ) {
         let input: Vec<String> = input.iter().map(|s| s.to_string()).collect();
-        let parsed = RequestPathParts::parse(&input)
-            .expect(&format!("Failed to parse request: {:?}", input));
+        let parsed = WikiPagePath::new(input.iter().map(|s| s.to_owned()).collect());
         assert_eq!(
-            expected_file_stem, parsed.file_stem,
+            Some(expected_file_stem),
+            parsed.file_name(),
             "Unexpected file_stem while parsing request: {:?}",
             input
         );
         assert_eq!(
-            expected_file_extension, parsed.file_extension,
+            Some(expected_file_extension),
+            parsed.file_extension(),
             "Unexpected file_extension while parsing request: {:?}",
             input
         );
         assert_eq!(
-            expected_path_elements, parsed.path_elements,
+            expected_path_elements,
+            parsed.directories(),
             "Unexpected path_elements while parsing request: {:?}",
             input
         );
@@ -357,7 +354,12 @@ mod tests {
 
     #[test]
     fn test_request_path_parse_unsupported() {
-        assert!(RequestPathParts::parse(&[]).is_none());
-        assert!(RequestPathParts::parse(&["README".to_owned()]).is_none());
+        let empty = WikiPagePath::new(vec![]);
+        assert!(empty.directories().is_empty());
+        assert!(empty.file_name_and_extension().is_none());
+
+        let extensionless_file = WikiPagePath::new(vec!["README".to_owned()]);
+        assert!(extensionless_file.directories().is_empty());
+        assert!(extensionless_file.file_name_and_extension().is_none());
     }
 }
