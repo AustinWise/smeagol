@@ -7,6 +7,11 @@ Notes that might be helpful when hacking on this program.
 * [Rocket docs](https://rocket.rs)
 * [Askama template syntax](https://djc.github.io/askama/template_syntax.html)
 
+When hacking on GitHub actions workflows, these might be helpful:
+
+* [GitHub Actions documentation](https://docs.github.com/en/actions)
+* [GitHub API for releases](https://docs.github.com/en/rest/reference/releases)
+
 # Releasing a new version
 
 Perform the following steps:
