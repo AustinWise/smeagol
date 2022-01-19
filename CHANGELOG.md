@@ -1,4 +1,4 @@
-WIP
+0.2.0 (2022-01-18)
 ===
 
 * Basic editing support [#16](https://github.com/AustinWise/smeagol/issues/16)
