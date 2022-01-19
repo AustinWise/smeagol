@@ -26,6 +26,8 @@ jobs:
     env:
       RELEASE_BODY_FILE_NAME: __release_body_file_dont_commit__.txt
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
       - name: Create release body file
         shell: bash
         run: |
