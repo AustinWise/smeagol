@@ -63,7 +63,7 @@ impl EmbeddedFile {
         {
             writeln!(
                 f,
-                "    AssetResponse::new(include_bytes!(\"{}\"), \"{}\")",
+                "    AssetResponse::new(include_bytes!(r#\"{}\"#), \"{}\")",
                 self.file_path.to_str().unwrap(),
                 self.file_type.content_type()
             )?;
