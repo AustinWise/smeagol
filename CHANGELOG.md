@@ -1,5 +1,8 @@
-0.2.0 (2022-01-18)
+WIP
 ===
+
+0.2.0 (2022-01-18)
+=====
 
 * Basic editing support [#16](https://github.com/AustinWise/smeagol/issues/16)
 * When navigating to a non-existent markdown page, show a placeholder that allows creating that page.
