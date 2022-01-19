@@ -1,5 +1,6 @@
 # Creates a GitHub release, builds the program for multiple targets, then
-# uploads the build assets to the GitHub release.
+# uploads the build assets to the GitHub release. Uses the body of the
+# annotated tag (git tag -a) to populate the body of the release.
 #
 # Based on the following:
 # https://github.com/BurntSushi/ripgrep/blob/df83b8b44426b3f2179abe632eb183e8c8270524/.github/workflows/release.yml
@@ -12,14 +13,24 @@ on:
     # branches:
     # - ci_testing
     tags:
-    - "[0-9]+.[0-9]+.[0-9]+"
+    - "[0-9]+\\.[0-9]+\\.[0-9]+(-.+)?"
 jobs:
   create-release:
-    name: create-release
     runs-on: ubuntu-20.04
     outputs:
+      id: ${{ steps.release.outputs.id }}
       upload_url: ${{ steps.release.outputs.upload_url }}
+    env:
+      RELEASE_BODY_FILE_NAME: __release_body_file_dont_commit__.txt
     steps:
+      - name: Create release body file
+        shell: bash
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            git tag -l ${{ github.ref }} --format='%(contents)' > $RELEASE_BODY_FILE_NAME
+          else
+            echo "test release, please ignore" > $RELEASE_BODY_FILE_NAME
+          fi
       - name: Create GitHub release
         id: release
         uses: actions/create-release@v1.1.4
@@ -29,9 +40,10 @@ jobs:
           tag_name: ${{ github.ref_name }}
           release_name: ${{ github.ref_name }}
           draft: true
+          body_path: ${{ env.RELEASE_BODY_FILE_NAME }}
+          prerelease: contains(github.ref_name, '-')
 
   build-release:
-    name: build-release
     needs: ['create-release']
     runs-on: ${{ matrix.image }}
     env:
@@ -41,40 +53,47 @@ jobs:
       PROGRAM_NAME: smeagol-wiki
     strategy:
       matrix:
-        build: [linux-x64, linux-arm32, linux-arm64, macos-x64, macos-arm64, win-x64-msvc, win-x86-msvc, win-arm64-msvc]
         include:
         - build: linux-x64
           os: ubuntu
           image: ubuntu-20.04
           target: x86_64-unknown-linux-gnu
+          use-cross: false
         - build: linux-arm32
           os: ubuntu
           image: ubuntu-20.04
           target: arm-unknown-linux-gnueabihf
+          use-cross: true
         - build: linux-arm64
           os: ubuntu
           image: ubuntu-20.04
           target: aarch64-unknown-linux-gnu
+          use-cross: true
         - build: macos-x64
           os: macos
           image: macos-11
           target: x86_64-apple-darwin
+          use-cross: false
         - build: macos-arm64
           os: macos
           image: macos-11
           target: aarch64-apple-darwin
+          use-cross: false
         - build: win-x64-msvc
           os: windows
           image: windows-2022
           target: x86_64-pc-windows-msvc
+          use-cross: false
         - build: win-x86-msvc
           os: windows
           image: windows-2022
           target: i686-pc-windows-msvc
+          use-cross: false
         - build: win-arm64-msvc
           os: windows
           image: windows-2022
           target: aarch64-pc-windows-msvc
+          use-cross: false
 
     steps:
     - name: Checkout repository
@@ -89,7 +108,7 @@ jobs:
 
     - uses: actions-rs/cargo@v1
       with:
-        use-cross: true
+        use-cross: ${{ matrix.use-cross }}
         command: build
         args: --release --target ${{ matrix.target }}
 
@@ -100,18 +119,18 @@ jobs:
     - name: Build archive
       shell: bash
       run: |
-        staging="${{ env.PROGRAM_NAME }}-${{ github.ref_name }}-${{ matrix.target }}"
+        staging="${PROGRAM_NAME}-${{ github.ref_name }}-${{ matrix.target }}"
         mkdir -p "$staging"/doc
 
         cp {README.md,LICENSE} "$staging/"
         cp CHANGELOG.md "$staging/doc/"
 
         if [ "${{ matrix.os }}" = "windows" ]; then
-          cp "target/${{ matrix.target }}/release/${{ env.PROGRAM_NAME }}.exe" "$staging/"
+          cp "target/${{ matrix.target }}/release/${PROGRAM_NAME}.exe" "$staging/"
           7z a "$staging.zip" "$staging"
           echo "ASSET=$staging.zip" >> $GITHUB_ENV
         else
-          cp "target/${{ matrix.target }}/release/${{ env.PROGRAM_NAME }}" "$staging/"
+          cp "target/${{ matrix.target }}/release/${PROGRAM_NAME}" "$staging/"
           tar czf "$staging.tar.gz" "$staging"
           echo "ASSET=$staging.tar.gz" >> $GITHUB_ENV
         fi
@@ -125,3 +144,19 @@ jobs:
         asset_path: ${{ env.ASSET }}
         asset_name: ${{ env.ASSET }}
         asset_content_type: application/octet-stream
+
+  publish-release:
+    if: github.ref_type == 'tag'
+    needs: ['create-release', 'build-release']
+    runs-on: ubuntu-20.04
+    steps:
+    - name: Publish release, by setting draft to false
+      shell: bash
+      run: |
+        curl \
+          -Ssf \
+          -X PATCH \
+          -H "Accept: application/vnd.github.v3+json" \
+          -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          "https://api.github.com/repos/${{ github.repository }}/releases/${{ needs.create-release.outputs.id }}" \
+          -d '{"draft":false}'
