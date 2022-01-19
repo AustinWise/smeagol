@@ -46,7 +46,7 @@ jobs:
           release_name: ${{ github.ref_name }}
           draft: true
           body_path: ${{ env.RELEASE_BODY_FILE_NAME }}
-          prerelease: contains(github.ref_name, '-')
+          prerelease: ${{ contains(github.ref_name, '-') }}
 
   build-release:
     needs: ["create-release"]
