@@ -1,5 +1,6 @@
 use askama::Template;
 
+use crate::assets::favicon_png_uri;
 use crate::assets::primer_css_uri;
 
 pub struct Breadcrumb<'a> {
@@ -17,6 +18,7 @@ impl<'a> Breadcrumb<'a> {
 #[template(path = "view_page.html", escape = "none")]
 struct ViewPageTemplate<'a> {
     primer_css_uri: &'a str,
+    favicon_png_uri: &'a str,
     title: &'a str,
     edit_url: &'a str,
     content: &'a str,
@@ -30,8 +32,10 @@ pub fn render_page(
     breadcrumbs: Vec<Breadcrumb<'_>>,
 ) -> askama::Result<String> {
     let primer_css_uri = &primer_css_uri();
+    let favicon_png_uri = &favicon_png_uri();
     let page = ViewPageTemplate {
         primer_css_uri,
+        favicon_png_uri,
         title,
         edit_url,
         content,
@@ -45,6 +49,7 @@ pub fn render_page(
 #[template(path = "page_placeholder.html")]
 struct PagePlaceholderTemplate<'a> {
     primer_css_uri: &'a str,
+    favicon_png_uri: &'a str,
     title: &'a str,
     file_path: &'a str,
     create_url: &'a str,
@@ -58,8 +63,10 @@ pub fn render_page_placeholder(
     breadcrumbs: Vec<Breadcrumb<'_>>,
 ) -> askama::Result<String> {
     let primer_css_uri = &primer_css_uri();
+    let favicon_png_uri = &favicon_png_uri();
     let template = PagePlaceholderTemplate {
         primer_css_uri,
+        favicon_png_uri,
         title,
         file_path,
         create_url,
@@ -73,6 +80,7 @@ pub fn render_page_placeholder(
 #[template(path = "edit_page.html")]
 struct EditTemplate<'a> {
     primer_css_uri: &'a str,
+    favicon_png_uri: &'a str,
     title: &'a str,
     post_url: &'a str,
     view_url: &'a str,
@@ -88,8 +96,10 @@ pub fn render_edit_page(
     breadcrumbs: Vec<Breadcrumb<'_>>,
 ) -> askama::Result<String> {
     let primer_css_uri = &primer_css_uri();
+    let favicon_png_uri = &favicon_png_uri();
     let template = EditTemplate {
         primer_css_uri,
+        favicon_png_uri,
         title,
         post_url,
         view_url,

@@ -24,6 +24,7 @@ impl io::Write for ContextWriter {
 enum FileType {
     Css,
     Json,
+    Png,
 }
 
 impl FileType {
@@ -31,6 +32,7 @@ impl FileType {
         match self {
             Self::Css => "text/css; charset=UTF-8",
             Self::Json => "test/json; charset=UTF-8",
+            Self::Png => "image/png",
         }
     }
 }
@@ -105,6 +107,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let files = [
         EmbeddedFile::new("primer.css", FileType::Css),
         EmbeddedFile::new("primer.css.map", FileType::Json),
+        EmbeddedFile::new("favicon.png", FileType::Png),
     ];
 
     // Record all inputs, including this build script.
