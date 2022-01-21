@@ -38,3 +38,22 @@ Perform the following steps:
 1. `cargo build` to ensure `Cargo.lock` is also updated
 1. `git commit`
 1. `git push origin master`
+
+# Profiling binary size using SizeBench
+
+Microsoft's [SizeBench](https://www.microsoft.com/store/productId/9NDF4N1WG7D6)
+tool can look at the binary. You have to make the following changes to the linking
+on Windows to make the generated code compatible.
+
+Add these to the `.cargo/config` file:
+
+```
+rustflags = ["-C", "link-arg=/LTCG:OFF", "-C", "link-arg=/INCREMENTAL:NO"]
+```
+
+Add this to `Cargo.toml`:
+
+```toml
+[profile.release]
+codegen-units = 1
+```
