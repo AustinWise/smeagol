@@ -118,6 +118,7 @@ function Detect-LatestVersion() {
     
     write-host " $url"
     try {
+        # TODO: switch to using invoke-restmethod
         $data = Invoke-WebRequest -Uri $url -Headers $headers -UseBasicParsing
     }
     catch {
