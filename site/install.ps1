@@ -9,7 +9,9 @@ param (
     [Parameter(HelpMessage = 'Whether to show a progress bar. Disabled by default because it greatly increase the amount of time a download takes.')]
     [switch]$ShowProgressBar,
     [Parameter(HelpMessage = 'Which version to download. By default the latest version is downloaded')]
-    [string]$Version
+    [string]$Version,
+    [Parameter(HelpMessage = 'Which directory to download file to.')]
+    [string]$InstallDir
 )
 
 $ErrorActionPreference = "Stop"
@@ -56,57 +58,65 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 
-public static class FileExtractor
+namespace TEMP_NAMESPACE_REPLACE_ME
 {
-    public static void ExtractExe(string zipFilePath, string exeFileName, string pathToTarget)
+    public class FileExtractor
     {
-        try
+        public void ExtractExe(string zipFilePath, string exeFileName, string pathToTarget)
         {
-            using (var zip = ZipFile.OpenRead(zipFilePath))
+            try
             {
-                var matchingEntries = zip.Entries.Where(e => e.Name == exeFileName).ToList();
-                if (matchingEntries.Count == 0)
+                Directory.CreateDirectory(Path.GetDirectoryName(pathToTarget));
+                using (var zip = ZipFile.OpenRead(zipFilePath))
                 {
-                    throw new Exception("The downloaded zip file did not contain the expect exe. Looked for: " + exeFileName);
-                }
-                else if (matchingEntries.Count == 1)
-                {
-                    string tempFileName = Path.GetTempFileName();
-                    Console.WriteLine(tempFileName);
-                    using (var tempFs = new FileStream(tempFileName, FileMode.Open, FileAccess.Write, FileShare.ReadWrite))
-                    using (var exeFs = matchingEntries[0].Open())
+                    var matchingEntries = zip.Entries.Where(e => e.Name == exeFileName).ToList();
+                    if (matchingEntries.Count == 0)
                     {
-                        exeFs.CopyTo(tempFs);
-                        tempFs.Flush(true);
+                        throw new Exception("The downloaded zip file did not contain the expect exe. Looked for: " + exeFileName);
                     }
-                    if (File.Exists(pathToTarget))
+                    else if (matchingEntries.Count == 1)
                     {
-                        //TODO: consider using File.Replace
-                        //That requires the source and destination to be on the same volume,
-                        //so there are more things to go wrong.
-                        File.Delete(pathToTarget);
+                        string tempFileName = pathToTarget + ".new";
+                        Console.WriteLine(tempFileName);
+                        using (var tempFs = new FileStream(tempFileName, FileMode.Create, FileAccess.Write, FileShare.None))
+                        using (var exeFs = matchingEntries[0].Open())
+                        {
+                            exeFs.CopyTo(tempFs);
+                            tempFs.Flush(true);
+                        }
+                        if (File.Exists(pathToTarget))
+                        {
+                            File.Replace(tempFileName, pathToTarget, pathToTarget + ".old");
+                        }
+                        else
+                        {
+                            File.Move(tempFileName, pathToTarget);
+                        }
                     }
-                    File.Move(tempFileName, pathToTarget);
-                }
-                else
-                {
-                    throw new Exception("The downloaded zip contained multiple copies of the exe. I don't know which one to use. Found paths: " + string.Join(", ", matchingEntries.Select(e => e.FullName).ToArray()));
+                    else
+                    {
+                        throw new Exception("The downloaded zip contained multiple copies of the exe. I don't know which one to use. Found paths: " + string.Join(", ", matchingEntries.Select(e => e.FullName).ToArray()));
+                    }
                 }
             }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine(ex);
-            throw;
-        }
-        finally
-        {
-            File.Delete(zipFilePath);
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+                throw;
+            }
+            finally
+            {
+                File.Delete(zipFilePath);
+            }
         }
     }
 }
 "@
+
+$file_extractor_namespace = "NS_" + [System.Guid]::NewGuid().ToString("N")
+$file_extractor_source = $file_extractor_source.Replace("TEMP_NAMESPACE_REPLACE_ME", $file_extractor_namespace)
 Add-Type -TypeDefinition $file_extractor_source -ReferencedAssemblies @("System.IO.Compression", "System.IO.Compression.FileSystem")
+$file_extractor = new-object -TypeName "$file_extractor_namespace.FileExtractor"
 
 function Detect-LatestVersion() {
     $url = "https://api.github.com/repos/$GitHub/releases/latest"
@@ -116,7 +126,6 @@ function Detect-LatestVersion() {
         $headers["Authorization"] = "token $env:GITHUB_TOKEN"
     }
     
-    write-host " $url"
     try {
         # TODO: switch to using invoke-restmethod
         $data = Invoke-WebRequest -Uri $url -Headers $headers -UseBasicParsing
@@ -129,7 +138,6 @@ function Detect-LatestVersion() {
     return $response.Name
 }
 
-# TODO: validate format of $GitHub
 $split = $GitHub.Split("/")
 if ($split.Length -ne 2) {
     throw "Invalid GitHub name, expected something like org_name/repo_name, found: $GitHub"
@@ -164,7 +172,9 @@ try {
     throw "Failed to download from $download_url to  $temp_file_path, error: $_"
 }
 
+
+
 # TODO: write to the correct location and make sure it is in the PATH
 $output_file = "C:\temp\$Crate.exe"
-[FileExtractor]::ExtractExe($temp_file_path, "$Crate.exe", $output_file)
+$file_extractor.ExtractExe($temp_file_path, "$Crate.exe", $output_file)
 Write-Host "Extracted to: $output_file"
