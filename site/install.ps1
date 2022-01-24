@@ -28,40 +28,86 @@ if ([System.Environment]::OSVersion.Platform -ne [System.PlatformID]::Win32NT) {
     throw "This script is only supported on Windows. On unix-like systems, use the shell script.";
 }
 
-function Detect-Target {
-    try {
-        # Despite the "mscorlib", this also works in Powershell Core
-        $arch = [System.Runtime.InteropServices.RuntimeInformation, mscorlib]::OSArchitecture
-    }
-    catch {
-        # TODO: consider using GetNativeSystemInfo directly, to support older versions of the .NET .
-        # The only supported Windows 10 releases that did not come with this feature are LTSC releases,
-        # so maybe it is not a big deal.
-        throw "This installer requires .NET Framework 4.7.1 or later. Please install from here: https://dotnet.microsoft.com/download/dotnet-framework"
-    }
-
-    switch ($arch) {
-        ([System.Runtime.InteropServices.Architecture, mscorlib]::X86) { $target_arch = "i686" }
-        ([System.Runtime.InteropServices.Architecture, mscorlib]::X64) { $target_arch = "x86_64" }
-        ([System.Runtime.InteropServices.Architecture, mscorlib]::Arm) { throw "As of Rust 1.58, 32-bit ARM on Windows is not supported. thumbv7a-pc-windows-msvc only has tier 3 support: https://doc.rust-lang.org/nightly/rustc/platform-support.html" }
-        ([System.Runtime.InteropServices.Architecture, mscorlib]::Arm64) { $target_arch = "aarch64" }
-        # TODO: add a more useful help message, like saying to file a bug or update something
-        Default { throw "Unknown CPU architecture: $arch" }
-    }
-
-    return "$target_arch-pc-windows-msvc"
-}
-
 $file_extractor_source = @"
+using Microsoft.Win32.SafeHandles;
 using System;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Runtime.InteropServices;
 
 namespace TEMP_NAMESPACE_REPLACE_ME
 {
-    public class FileExtractor
+    public class Helper
     {
+        [DllImport("kernel32", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool IsWow64Process2(SafeProcessHandle handle, out ushort pProcessMachine, out ushort pNativeMachine);
+
+
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct SYSTEM_INFO
+        {
+            internal ushort wProcessorArchitecture;
+            internal ushort wReserved;
+            internal int dwPageSize;
+            internal IntPtr lpMinimumApplicationAddress;
+            internal IntPtr lpMaximumApplicationAddress;
+            internal IntPtr dwActiveProcessorMask;
+            internal int dwNumberOfProcessors;
+            internal int dwProcessorType;
+            internal int dwAllocationGranularity;
+            internal short wProcessorLevel;
+            internal short wProcessorRevision;
+        }
+
+        internal const int PROCESSOR_ARCHITECTURE_INTEL = 0;
+        internal const int PROCESSOR_ARCHITECTURE_ARM = 5;
+        internal const int PROCESSOR_ARCHITECTURE_AMD64 = 9;
+        internal const int PROCESSOR_ARCHITECTURE_ARM64 = 12;
+
+        [DllImport("kernel32")]
+        internal static extern void GetNativeSystemInfo(out SYSTEM_INFO lpSystemInfo);
+
+        public int GetArchitecture()
+        {
+            try
+            {
+                ushort process, native;
+                var cur_proc = Process.GetCurrentProcess();
+                if (!IsWow64Process2(cur_proc.SafeHandle, out process, out native))
+                    throw new Win32Exception();
+                switch (native)
+                {
+                    case 0x014c:
+                        return PROCESSOR_ARCHITECTURE_INTEL;
+                    case 0x8664:
+                        return PROCESSOR_ARCHITECTURE_AMD64;
+                    case 0xAA64:
+                        return PROCESSOR_ARCHITECTURE_ARM64;
+                    //TODO:figure out which is correct
+                    case 0x01c0: //ARM Little-Endian
+                    case 0x01c2: //ARM Thumb/Thumb-2 Little-Endian
+                        return PROCESSOR_ARCHITECTURE_ARM;
+                    default:
+                        throw new Exception("Unknown architecture: " + native.ToString("X"));
+                }
+            }
+            catch (EntryPointNotFoundException)
+            {
+                // On OSs earlier than Windows 10, version 1511, fall through to the old way.
+            }
+
+            // NOTE: When called from ARM64EC mode, this function gives the wrong answer!
+            // Specifically it return x86_64. And as of Windows 11, PowerShell.exe is a
+            // ARM64EC process.
+            SYSTEM_INFO sysInfo;
+            GetNativeSystemInfo(out sysInfo);
+            return sysInfo.wProcessorArchitecture;
+        }
+
         public void ExtractExe(string zipFilePath, string exeFileName, string pathToTarget)
         {
             try
@@ -116,7 +162,20 @@ namespace TEMP_NAMESPACE_REPLACE_ME
 $file_extractor_namespace = "NS_" + [System.Guid]::NewGuid().ToString("N")
 $file_extractor_source = $file_extractor_source.Replace("TEMP_NAMESPACE_REPLACE_ME", $file_extractor_namespace)
 Add-Type -TypeDefinition $file_extractor_source -ReferencedAssemblies @("System.IO.Compression", "System.IO.Compression.FileSystem")
-$file_extractor = new-object -TypeName "$file_extractor_namespace.FileExtractor"
+$helper = new-object -TypeName "$file_extractor_namespace.helper"
+
+function Detect-Target {
+    switch ($helper.GetArchitecture()) {
+        0 { $target_arch = "i686" }
+        5 { throw "As of Rust 1.58, 32-bit ARM on Windows is not supported. thumbv7a-pc-windows-msvc only has tier 3 support: https://doc.rust-lang.org/nightly/rustc/platform-support.html" }
+        9 { $target_arch = "x86_64" }
+        12 { $target_arch = "aarch64" }
+        # TODO: add a more useful help message, like saying to file a bug or update something
+        Default { throw "Unknown CPU architecture: $arch" }
+    }
+
+    return "$target_arch-pc-windows-msvc"
+}
 
 function Detect-LatestVersion() {
     $url = "https://api.github.com/repos/$GitHub/releases/latest"
@@ -172,9 +231,7 @@ try {
     throw "Failed to download from $download_url to  $temp_file_path, error: $_"
 }
 
-
-
 # TODO: write to the correct location and make sure it is in the PATH
 $output_file = "C:\temp\$Crate.exe"
-$file_extractor.ExtractExe($temp_file_path, "$Crate.exe", $output_file)
+$helper.ExtractExe($temp_file_path, "$Crate.exe", $output_file)
 Write-Host "Extracted to: $output_file"
