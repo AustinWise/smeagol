@@ -28,6 +28,12 @@ if ([System.Environment]::OSVersion.Platform -ne [System.PlatformID]::Win32NT) {
     throw "This script is only supported on Windows. On unix-like systems, use the shell script.";
 }
 
+$bin_folder_name = ".kame-app"
+$bin_dir = [System.IO.Path]::Combine($env:USERPROFILE, $bin_folder_name)
+if (!(Test-Path $bin_dir)) {
+    mkdir $bin_dir -Force
+}
+
 $file_extractor_source = @"
 using Microsoft.Win32.SafeHandles;
 using System;
@@ -123,7 +129,6 @@ namespace TEMP_NAMESPACE_REPLACE_ME
                     else if (matchingEntries.Count == 1)
                     {
                         string tempFileName = pathToTarget + ".new";
-                        Console.WriteLine(tempFileName);
                         using (var tempFs = new FileStream(tempFileName, FileMode.Create, FileAccess.Write, FileShare.None))
                         using (var exeFs = matchingEntries[0].Open())
                         {
@@ -145,9 +150,8 @@ namespace TEMP_NAMESPACE_REPLACE_ME
                     }
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine(ex);
                 throw;
             }
             finally
@@ -231,7 +235,20 @@ try {
     throw "Failed to download from $download_url to  $temp_file_path, error: $_"
 }
 
-# TODO: write to the correct location and make sure it is in the PATH
-$output_file = "C:\temp\$Crate.exe"
+$output_file = [System.IO.Path]::Combine($bin_dir, "$Crate.exe")
 $helper.ExtractExe($temp_file_path, "$Crate.exe", $output_file)
 Write-Host "Extracted to: $output_file"
+
+$path_entry = "$env:USERPROFILE\$bin_folder_name"
+$existing_path = [System.Environment]::GetEnvironmentVariable("PATH", [System.EnvironmentVariableTarget]::User);
+$ndx = $existing_path.IndexOf($path_entry, [System.StringComparison]::OrdinalIgnoreCase)
+if ($ndx -lt 0) {
+    Write-Host "Adding $path_entry to PATH"
+    $split = $existing_path.Split(";")
+    $split += $path_entry
+    $joined = [System.String]::Join(";", $split)
+    [System.Environment]::SetEnvironmentVariable("PATH", $joined, [System.EnvironmentVariableTarget]::User);
+    Write-Host "Update PATH. Please retstart your terminals."
+}
+
+Write-Host "Run the program by typing '$Crate' in a terminal."
