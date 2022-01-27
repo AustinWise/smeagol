@@ -9,9 +9,7 @@ param (
     [Parameter(HelpMessage = 'Whether to show a progress bar. Disabled by default because it greatly increase the amount of time a download takes.')]
     [switch]$ShowProgressBar,
     [Parameter(HelpMessage = 'Which version to download. By default the latest version is downloaded')]
-    [string]$Version,
-    [Parameter(HelpMessage = 'Which directory to download file to.')]
-    [string]$InstallDir
+    [string]$Version
 )
 
 $ErrorActionPreference = "Stop"
