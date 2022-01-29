@@ -1,6 +1,8 @@
 WIP
 ===
 
+* Don't allow access to files and directories whose name starts with a dot (`.`)
+
 0.2.1 (2021-01-19)
 =====
 

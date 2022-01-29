@@ -1,8 +1,12 @@
-use std::{io::{Read, Write}, path::PathBuf};
+use std::{
+    io::{Read, Write},
+    path::PathBuf,
+};
 
 use crate::error::MyError;
 
 //TODO: it is possible to use a borrowed string? Would that reduce copies?
+#[derive(Debug)]
 pub enum RepositoryItem {
     File(String),
     Directory(String),
@@ -15,6 +19,10 @@ pub trait Repository: std::fmt::Debug {
     fn enumerate_files(&self, directory: &[&str]) -> Result<Vec<RepositoryItem>, MyError>;
 }
 
+fn path_element_ok(element: &str) -> bool {
+    !element.starts_with(".")
+}
+
 #[derive(Debug)]
 struct FileSystemRepository {
     root_dir: PathBuf,
@@ -24,6 +32,9 @@ impl FileSystemRepository {
     fn canonicalize_path(&self, relative_path: &[&str]) -> Result<PathBuf, MyError> {
         let mut path = self.root_dir.to_path_buf();
         for part in relative_path {
+            if !path_element_ok(part) {
+                return Err(MyError::InvalidPath);
+            }
             path.push(part);
         }
 
@@ -68,14 +79,16 @@ impl Repository for FileSystemRepository {
             .filter_map(|maybe_ent| match maybe_ent {
                 Err(_) => None,
                 Ok(ent) => {
-                    if ent.path().is_file() {
-                        Some(RepositoryItem::File(
-                            ent.path().file_name().unwrap().to_str().unwrap().to_owned(),
-                        ))
-                    } else if ent.path().is_dir() {
-                        Some(RepositoryItem::Directory(
-                            ent.path().file_name().unwrap().to_str().unwrap().to_owned(),
-                        ))
+                    let entry_name = ent.file_name();
+                    let entry_name = entry_name.to_str().unwrap();
+                    if path_element_ok(entry_name) {
+                        if ent.path().is_file() {
+                            Some(RepositoryItem::File(entry_name.to_owned()))
+                        } else if ent.path().is_dir() {
+                            Some(RepositoryItem::Directory(entry_name.to_owned()))
+                        } else {
+                            None
+                        }
                     } else {
                         None
                     }
