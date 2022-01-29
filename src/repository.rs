@@ -20,7 +20,7 @@ pub trait Repository: std::fmt::Debug {
 }
 
 fn path_element_ok(element: &str) -> bool {
-    !element.starts_with(".")
+    !element.starts_with('.')
 }
 
 #[derive(Debug)]
