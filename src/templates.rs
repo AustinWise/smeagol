@@ -108,3 +108,53 @@ pub fn render_edit_page(
     };
     template.render()
 }
+
+pub struct DirectoryEntry<'a> {
+    name: &'a str,
+    href: String,
+}
+
+impl<'a> DirectoryEntry<'a> {
+    pub fn new(name: &'a str, href: String) -> Self {
+        DirectoryEntry {
+            name,
+            href,
+        }
+    }
+}
+
+#[derive(Template)]
+#[template(path = "overview.html", escape = "none")]
+struct OverviewTemplate<'a> {
+    primer_css_uri: &'a str,
+    favicon_png_uri: &'a str,
+    file_svg: &'a str,
+    file_directory_svg: &'a str,
+    title: &'a str,
+    breadcrumbs: Vec<Breadcrumb<'a>>,
+    directories: Vec<DirectoryEntry<'a>>,
+    files: Vec<DirectoryEntry<'a>>,
+}
+
+pub fn render_overview(
+    title: &str,
+    breadcrumbs: Vec<Breadcrumb<'_>>,
+    directories: Vec<DirectoryEntry<'_>>,
+    files: Vec<DirectoryEntry<'_>>,
+) -> askama::Result<String> {
+    let primer_css_uri = &primer_css_uri();
+    let favicon_png_uri = &favicon_png_uri();
+    let file_svg = include_str!("../static/file.svg");
+    let file_directory_svg = include_str!("../static/file_directory.svg");
+    let template = OverviewTemplate {
+        primer_css_uri,
+        favicon_png_uri,
+        file_svg,
+        file_directory_svg,
+        title,
+        breadcrumbs,
+        directories,
+        files,
+    };
+    template.render()
+}

@@ -1,0 +1,43 @@
+{% extends "layout.html" %}
+
+{% block extra_breadcrumbs %}
+<li class="breadcrumb-item">
+    <a href="/overview">home</a>
+</li>
+{% endblock %}
+
+
+{% block content %}
+
+<div class="overview">
+    <div class="Box">
+        <ul>
+            {% for e in directories %}
+            <li class="Box-row">
+                <span class="pr-2">
+                    {{file_directory_svg}}
+                </span>
+                <span>
+                    <a href="{{e.href}}">
+                        {{e.name}}
+                    </a>
+                </span>
+            </li>
+            {% endfor %}
+            {% for e in files %}
+            <li class="Box-row">
+                <span class="pr-2">
+                    {{file_svg}}
+                </span>
+                <span>
+                    <a href="{{e.href}}">
+                        {{e.name}}
+                    </a>
+                </span>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+
+{% endblock %}

@@ -6,10 +6,10 @@ use std::{
 use crate::error::MyError;
 
 //TODO: it is possible to use a borrowed string? Would that reduce copies?
-#[derive(Debug)]
+#[derive(Debug, PartialEq, PartialOrd, Eq, Ord)]
 pub enum RepositoryItem {
-    File(String),
     Directory(String),
+    File(String),
 }
 
 pub trait Repository: std::fmt::Debug {
@@ -20,7 +20,7 @@ pub trait Repository: std::fmt::Debug {
 }
 
 fn path_element_ok(element: &str) -> bool {
-    !element.starts_with(".")
+    !element.starts_with('.')
 }
 
 #[derive(Debug)]

@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use crate::error::MyError;
 use crate::repository::Repository;
+use crate::repository::RepositoryItem;
 use crate::settings::Settings;
 
 /// Wiki god object.
@@ -38,5 +39,9 @@ impl Wiki {
 
     pub fn directory_exists(&self, path: &[&str]) -> Result<bool, MyError> {
         self.0.repository.directory_exists(path)
+    }
+
+    pub fn enumerate_files(&self, directory: &[&str]) -> Result<Vec<RepositoryItem>, MyError> {
+        self.0.repository.enumerate_files(directory)
     }
 }
