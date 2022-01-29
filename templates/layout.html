@@ -55,6 +55,14 @@
                 </form>
                 -->
             </div>
+            <div class="TableObject-item px-2">
+                <div class="BtnGroup d-flex">
+                    <a class="btn BtnGroup-item btn-sm hide-sm hide-md
+                          minibutton-rename-page" href="/overview">
+                        Overview
+                    </a>
+                </div>
+            </div>
             {% block page_view_controls %}{% endblock %}
         </div>
     </header>
@@ -62,6 +70,7 @@
         <h1 class="pt-4">{{title}}</h1>
         <nav aria-label="Breadcrumb">
             <ol>
+                {% block extra_breadcrumbs %}{% endblock %}
                 {% for crumb in breadcrumbs %}
                 <li class="breadcrumb-item">
                     <a href="{{crumb.href}}">{{crumb.name}}</a>

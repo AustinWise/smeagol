@@ -4,6 +4,7 @@ use rocket::http::impl_from_uri_param_identity;
 use rocket::http::uri::fmt::Formatter;
 use rocket::http::uri::fmt::Path;
 use rocket::http::uri::fmt::UriDisplay;
+use rocket::http::uri::Origin;
 use rocket::http::uri::Segments;
 use rocket::http::ContentType;
 use rocket::request::FromSegments;
@@ -12,8 +13,12 @@ use rocket::response::Responder;
 use rocket::{Build, Rocket};
 
 use crate::error::MyError;
+use crate::repository;
 use crate::settings::Settings;
-use crate::templates::{render_edit_page, render_page, render_page_placeholder, Breadcrumb};
+use crate::templates;
+use crate::templates::{
+    render_edit_page, render_overview, render_page, render_page_placeholder, Breadcrumb,
+};
 use crate::wiki::Wiki;
 
 struct MarkdownPage<'a> {
@@ -88,7 +93,7 @@ fn markdown_response(
         &title,
         edit_url,
         &rendered_markdown,
-        path.create_breadcrumbs(),
+        path.page_breadcrumbs(),
     )?)
 }
 
@@ -120,6 +125,12 @@ impl<'r> WikiPagePath<'r> {
         }
     }
 
+    fn append_segment(&self, new_seg: &'r str) -> Self {
+        let mut segments = self.segments.clone();
+        segments.push(new_seg);
+        WikiPagePath { segments }
+    }
+
     fn directories(&self) -> &[&'r str] {
         match self.segments.split_last() {
             Some((_, dirs)) => dirs,
@@ -140,17 +151,32 @@ impl<'r> WikiPagePath<'r> {
         Some(self.file_name_and_extension()?.1)
     }
 
-    fn create_breadcrumbs(&self) -> Vec<Breadcrumb<'r>> {
-        let mut dirs = self.directories();
+    fn breadcrumbs_helper<F: Fn(&'r [&'r str]) -> Origin>(
+        &'r self,
+        mut dirs: &'r [&'r str],
+        uri_func: F,
+    ) -> Vec<Breadcrumb<'r>> {
         let mut ret = Vec::with_capacity(dirs.len());
         while let Some((name, next_dirs)) = dirs.split_last() {
-            let url = uri!(page(WikiPagePath::from_slice(dirs))).to_string();
+            let url = uri_func(dirs).to_string();
             ret.push(Breadcrumb::new(name, url));
             dirs = next_dirs;
         }
         //TODO: put the elements in the list in the correct order
         ret.reverse();
         ret
+    }
+
+    fn page_breadcrumbs(&'r self) -> Vec<Breadcrumb<'r>> {
+        self.breadcrumbs_helper(self.directories(), |dirs| {
+            uri!(page(WikiPagePath::from_slice(dirs)))
+        })
+    }
+
+    fn overview_breadcrumbs(&'r self) -> Vec<Breadcrumb<'r>> {
+        self.breadcrumbs_helper(&self.segments, |dirs| {
+            uri!(overview(WikiPagePath::from_slice(dirs)))
+        })
     }
 }
 
@@ -226,7 +252,7 @@ fn edit_view(path: WikiPagePath, w: Wiki) -> Result<response::content::Html<Stri
         &post_url.to_string(),
         &view_url.to_string(),
         content,
-        path.create_breadcrumbs(),
+        path.page_breadcrumbs(),
     )?;
     Ok(response::content::Html(html))
 }
@@ -249,10 +275,8 @@ fn page(path: WikiPagePath, w: Wiki) -> WikiPageResponder {
         }
         Err(_) => {
             if w.directory_exists(&path.segments).unwrap() {
-                let mut segments = path.segments;
-                let file_name = &format!("{}.md", w.settings().index_page());
-                segments.push(file_name);
-                let path = WikiPagePath::new(segments);
+                let file_name = format!("{}.md", w.settings().index_page());
+                let path = path.append_segment(&file_name);
                 WikiPageResponder::Redirect(response::Redirect::to(uri!(page(path))))
             } else {
                 match path.file_name_and_extension() {
@@ -264,7 +288,7 @@ fn page(path: WikiPagePath, w: Wiki) -> WikiPageResponder {
                                     file_stem,
                                     &path.to_string(),
                                     &create_url.to_string(),
-                                    path.create_breadcrumbs(),
+                                    path.page_breadcrumbs(),
                                 )
                                 .unwrap(),
                             ),
@@ -280,6 +304,42 @@ fn page(path: WikiPagePath, w: Wiki) -> WikiPageResponder {
     }
 }
 
+fn overview_inner(path: WikiPagePath, w: Wiki) -> Result<response::content::Html<String>, MyError> {
+    let mut entries = w.enumerate_files(&path.segments)?;
+    entries.sort();
+    let entries = entries;
+
+    let directories = entries
+        .iter()
+        .filter_map(|e| match e {
+            repository::RepositoryItem::Directory(name) => {
+                let url = uri!(overview(path.append_segment(name))).to_string();
+                Some(templates::DirectoryEntry::new(name, url))
+            }
+            _ => None,
+        })
+        .collect();
+
+    let files = entries
+        .iter()
+        .filter_map(|e| match e {
+            repository::RepositoryItem::File(name) => {
+                let url = uri!(page(path.append_segment(name))).to_string();
+                Some(templates::DirectoryEntry::new(name, url))
+            }
+            _ => None,
+        })
+        .collect();
+
+    let html = render_overview("Overview", path.overview_breadcrumbs(), directories, files)?;
+    Ok(response::content::Html(html))
+}
+
+#[get("/overview/<path..>")]
+fn overview(path: WikiPagePath, w: Wiki) -> Result<response::content::Html<String>, MyError> {
+    overview_inner(path, w)
+}
+
 #[get("/")]
 fn index(w: Wiki) -> response::Redirect {
     let file_name = format!("{}.md", w.settings().index_page());
@@ -288,7 +348,7 @@ fn index(w: Wiki) -> response::Redirect {
 }
 
 pub fn mount_routes(rocket: Rocket<Build>) -> Rocket<Build> {
-    rocket.mount("/", routes![page, edit_save, edit_view, index])
+    rocket.mount("/", routes![page, edit_save, edit_view, overview, index])
 }
 
 #[cfg(test)]
@@ -373,5 +433,16 @@ mod tests {
         let extensionless_file = WikiPagePath::new(vec!["README"]);
         assert!(extensionless_file.directories().is_empty());
         assert!(extensionless_file.file_name_and_extension().is_none());
+    }
+
+    #[test]
+    fn test_wikipath_append() {
+        let empty = WikiPagePath::new(vec![]);
+
+        let folder = empty.append_segment("folder");
+        assert_eq!(folder.segments, vec!["folder"]);
+
+        let file = folder.append_segment("file");
+        assert_eq!(file.segments, vec!["folder", "file"]);
     }
 }

@@ -1,6 +1,7 @@
 WIP
 ===
 
+* Add overview, which alows browsing files and folders [#8](https://github.com/AustinWise/smeagol/issues/8)
 * Don't allow access to files and directories whose name starts with a dot (`.`)
 
 0.2.1 (2021-01-19)

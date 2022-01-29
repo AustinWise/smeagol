@@ -5,6 +5,7 @@
   "author": "Austin Wise",
   "license": "MIT",
   "dependencies": {
-    "@primer/css": "^19.1.1"
+    "@primer/css": "^19.1.1",
+    "@primer/octicons": "^16.3.0"
   }
 }
