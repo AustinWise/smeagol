@@ -1,4 +1,3 @@
-use pulldown_cmark::{html, Event, HeadingLevel, Options, Parser, Tag};
 use rocket::form::Form;
 use rocket::http::impl_from_uri_param_identity;
 use rocket::http::uri::fmt::Formatter;
@@ -14,88 +13,11 @@ use rocket::{Build, Rocket};
 
 use crate::error::MyError;
 use crate::repository;
-use crate::settings::Settings;
 use crate::templates;
 use crate::templates::{
     render_edit_page, render_overview, render_page, render_page_placeholder, Breadcrumb,
 };
 use crate::wiki::Wiki;
-
-struct MarkdownPage<'a> {
-    title: String,
-    events: Vec<Event<'a>>,
-}
-
-fn try_get_h1_title(
-    settings: &Settings,
-    fallback_file_name: &str,
-    events: &mut Vec<Event>,
-) -> String {
-    if settings.h1_title() && events.len() >= 2 {
-        if let Event::Start(Tag::Heading(HeadingLevel::H1, _, _)) = events[0] {
-            let end_ndx = events
-                .iter()
-                .position(|e| matches!(e, Event::End(Tag::Heading(HeadingLevel::H1, _, _))))
-                .unwrap();
-            let title = events[1..end_ndx]
-                .iter()
-                .map(|e| match e {
-                    Event::Text(str) => str.to_string(),
-                    not_str => panic!("Expected str, got: {:?}", not_str),
-                })
-                .collect();
-            events.drain(0..=end_ndx);
-            return title;
-        }
-    }
-    fallback_file_name.to_owned()
-}
-
-impl<'a> MarkdownPage<'a> {
-    fn new(settings: &'a Settings, file_name: &'a str, src: &'a str) -> MarkdownPage<'a> {
-        let mut options = Options::empty();
-        options.insert(Options::ENABLE_TABLES);
-        options.insert(Options::ENABLE_FOOTNOTES);
-        options.insert(Options::ENABLE_STRIKETHROUGH);
-        options.insert(Options::ENABLE_TASKLISTS);
-        options.insert(Options::ENABLE_SMART_PUNCTUATION);
-        let mut events: Vec<Event<'a>> = Parser::new_ext(src, options).collect();
-        let title = try_get_h1_title(settings, file_name, &mut events);
-
-        MarkdownPage { title, events }
-    }
-
-    fn title(&'a self) -> &'a str {
-        &self.title
-    }
-
-    fn render_html(self) -> String {
-        let mut rendered_markdown = String::new();
-        html::push_html(&mut rendered_markdown, self.events.into_iter());
-        rendered_markdown
-    }
-}
-
-fn markdown_response(
-    wiki: &Wiki,
-    edit_url: &str,
-    path: &WikiPagePath,
-    bytes: &[u8],
-) -> Result<String, MyError> {
-    let markdown_input = std::str::from_utf8(bytes)?;
-    let settings = wiki.settings();
-    let markdown_page = MarkdownPage::new(settings, path.file_name().unwrap(), markdown_input);
-
-    let title = markdown_page.title().to_owned();
-    let rendered_markdown = markdown_page.render_html();
-
-    Ok(render_page(
-        &title,
-        edit_url,
-        &rendered_markdown,
-        path.page_breadcrumbs(),
-    )?)
-}
 
 // Most of the time we are returning Page, so it is ok that it is bigger
 #[allow(clippy::large_enum_variant)]
@@ -147,6 +69,7 @@ impl<'r> WikiPagePath<'r> {
         Some(self.file_name_and_extension()?.0)
     }
 
+    #[cfg(test)]
     fn file_extension(&self) -> Option<&str> {
         Some(self.file_name_and_extension()?.1)
     }
@@ -257,33 +180,50 @@ fn edit_view(path: WikiPagePath, w: Wiki) -> Result<response::content::Html<Stri
     Ok(response::content::Html(html))
 }
 
-#[get("/page/<path..>")]
-fn page(path: WikiPagePath, w: Wiki) -> WikiPageResponder {
+fn page_response(
+    page: crate::page::Page,
+    path: &WikiPagePath,
+) -> Result<response::content::Html<String>, MyError> {
+    let edit_url = uri!(edit_view(path)).to_string();
+    let html = render_page(&page.title, &edit_url, &page.body, path.page_breadcrumbs())?;
+    let content_typed = response::content::Html(html);
+    Ok(content_typed)
+}
+
+fn page_inner(path: WikiPagePath, w: Wiki) -> Result<WikiPageResponder, MyError> {
     match w.read_file(&path.segments) {
         Ok(bytes) => {
-            let file_extension = path.file_extension();
-            if file_extension == Some("md") {
-                let edit_url = uri!(edit_view(&path)).to_string();
-                return WikiPageResponder::Page(response::content::Html(
-                    markdown_response(&w, &edit_url, &path, &bytes).unwrap(),
-                ));
-            }
-            match file_extension.and_then(ContentType::from_extension) {
-                Some(ext) => WikiPageResponder::TypedFile(response::content::Custom(ext, bytes)),
+            let file_info = path.file_name_and_extension();
+            Ok(match file_info {
+                Some((file_stem, file_ext)) => {
+                    match crate::page::get_page(file_stem, file_ext, &bytes, w.settings())? {
+                        Some(page_model) => {
+                            WikiPageResponder::Page(page_response(page_model, &path)?)
+                        }
+                        None => match ContentType::from_extension(file_ext) {
+                            Some(mine_type) => WikiPageResponder::TypedFile(
+                                response::content::Custom(mine_type, bytes),
+                            ),
+                            None => WikiPageResponder::File(bytes),
+                        },
+                    }
+                }
                 None => WikiPageResponder::File(bytes),
-            }
+            })
         }
         Err(_) => {
             if w.directory_exists(&path.segments).unwrap() {
                 let file_name = format!("{}.md", w.settings().index_page());
                 let path = path.append_segment(&file_name);
-                WikiPageResponder::Redirect(response::Redirect::to(uri!(page(path))))
+                Ok(WikiPageResponder::Redirect(response::Redirect::to(uri!(
+                    page(path)
+                ))))
             } else {
                 match path.file_name_and_extension() {
                     Some((file_stem, "md")) => {
                         let create_url = uri!(edit_view(&path));
-                        WikiPageResponder::PagePlaceholder(response::status::NotFound(
-                            response::content::Html(
+                        Ok(WikiPageResponder::PagePlaceholder(
+                            response::status::NotFound(response::content::Html(
                                 render_page_placeholder(
                                     file_stem,
                                     &path.to_string(),
@@ -291,17 +231,21 @@ fn page(path: WikiPagePath, w: Wiki) -> WikiPageResponder {
                                     path.page_breadcrumbs(),
                                 )
                                 .unwrap(),
-                            ),
+                            )),
                         ))
                     }
-                    _ => WikiPageResponder::NotFound(response::status::NotFound(format!(
-                        "File not found: {}",
-                        path
+                    _ => Ok(WikiPageResponder::NotFound(response::status::NotFound(
+                        format!("File not found: {}", path),
                     ))),
                 }
             }
         }
     }
+}
+
+#[get("/page/<path..>")]
+fn page(path: WikiPagePath, w: Wiki) -> Result<WikiPageResponder, MyError> {
+    page_inner(path, w)
 }
 
 fn overview_inner(path: WikiPagePath, w: Wiki) -> Result<response::content::Html<String>, MyError> {
@@ -354,36 +298,6 @@ pub fn mount_routes(rocket: Rocket<Build>) -> Rocket<Build> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_normal_title() {
-        let settings = Settings::new("Home", false);
-        let input = "# First H1\n# Second H1";
-        let markdown_page = MarkdownPage::new(&settings, "file_name", &input);
-        assert_eq!("file_name", markdown_page.title());
-        let rendered = markdown_page.render_html();
-        assert_eq!("<h1>First H1</h1>\n<h1>Second H1</h1>\n", rendered);
-    }
-
-    #[test]
-    fn test_h1_title() {
-        let settings = Settings::new("Home", true);
-        let input = "# First H1\n# Second H1";
-        let markdown_page = MarkdownPage::new(&settings, "file_name", &input);
-        assert_eq!("First H1", markdown_page.title());
-        let rendered = markdown_page.render_html();
-        assert_eq!("<h1>Second H1</h1>\n", rendered);
-    }
-
-    #[test]
-    fn test_h1_title_complicated() {
-        let settings = Settings::new("Home", true);
-        let input = "# Austin\'s Wiki\nwords words words";
-        let markdown_page = MarkdownPage::new(&settings, "file_name", &input);
-        assert_eq!("Austin\u{2019}s Wiki", markdown_page.title());
-        let rendered = markdown_page.render_html();
-        assert_eq!("<p>words words words</p>\n", rendered);
-    }
 
     fn assert_request_path_parse(
         input: &[&'static str],

@@ -3,6 +3,7 @@ extern crate rocket;
 
 mod assets;
 mod error;
+mod page;
 mod repository;
 mod requests;
 mod settings;
