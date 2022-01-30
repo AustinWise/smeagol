@@ -23,7 +23,7 @@ static WIKI: OnceCell<Wiki> = OnceCell::new();
 fn create_wiki() -> Result<Wiki, MyError> {
     let settings = parse_settings_from_args()?;
     let repo = create_file_system_repository(settings.git_repo().clone())?;
-    Ok(Wiki::new(settings, Box::new(repo)))
+    Wiki::new(settings, Box::new(repo))
 }
 
 #[rocket::async_trait]

@@ -23,5 +23,6 @@ rocket = "0.5.0-rc.1"
 serde = { version = "1.0", features = ["derive"] }
 strum = "0.23"
 strum_macros = "0.23"
+tantivy = "0.16.1"
 thiserror = "1.0"
 toml = "0.5.8"

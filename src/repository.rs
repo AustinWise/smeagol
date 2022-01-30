@@ -1,5 +1,6 @@
 use std::{
     io::{Read, Write},
+    ops::{Deref, DerefMut},
     path::PathBuf,
 };
 
@@ -17,6 +18,28 @@ pub trait Repository: std::fmt::Debug {
     fn write_file(&self, file_path: &[&str], content: &str) -> Result<(), MyError>;
     fn directory_exists(&self, path: &[&str]) -> Result<bool, MyError>;
     fn enumerate_files(&self, directory: &[&str]) -> Result<Vec<RepositoryItem>, MyError>;
+}
+
+#[derive(Debug)]
+pub struct RepoBox(Box<dyn Repository + Sync + Send>);
+
+impl RepoBox {
+    pub fn new(repo: Box<dyn Repository + Sync + Send>) -> Self {
+        Self(repo)
+    }
+}
+
+impl Deref for RepoBox {
+    type Target = dyn Repository + Sync + Send;
+    fn deref(&self) -> &Self::Target {
+        self.0.deref()
+    }
+}
+
+impl DerefMut for RepoBox {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.0.deref_mut()
+    }
 }
 
 fn path_element_ok(element: &str) -> bool {

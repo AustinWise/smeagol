@@ -28,4 +28,9 @@ pub enum MyError {
         #[from]
         source: std::str::Utf8Error,
     },
+    #[error("Search indexer failed in some way")]
+    SearchIndex {
+        #[from]
+        source: tantivy::TantivyError,
+    },
 }
