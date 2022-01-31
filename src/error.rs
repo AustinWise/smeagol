@@ -33,4 +33,9 @@ pub enum MyError {
         #[from]
         source: tantivy::TantivyError,
     },
+    #[error("Failed to parse search query")]
+    SearchQueryParsing {
+        #[from]
+        source: tantivy::query::QueryParserError,
+    },
 }

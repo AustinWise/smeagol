@@ -14,6 +14,7 @@ use rocket::{Build, Rocket};
 use crate::error::MyError;
 use crate::repository;
 use crate::templates;
+use crate::templates::render_search_results;
 use crate::templates::{
     render_edit_page, render_overview, render_page, render_page_placeholder, Breadcrumb,
 };
@@ -284,6 +285,17 @@ fn overview(path: WikiPagePath, w: Wiki) -> Result<response::content::Html<Strin
     overview_inner(path, w)
 }
 
+fn search_inner(q: &str, w: Wiki) -> Result<response::content::Html<String>, MyError> {
+    let results = w.search(q)?;
+    let html = render_search_results(q, results)?;
+    Ok(response::content::Html(html))
+}
+
+#[get("/search?<q>")]
+fn search(q: &str, w: Wiki) -> Result<response::content::Html<String>, MyError> {
+    search_inner(q, w)
+}
+
 #[get("/")]
 fn index(w: Wiki) -> response::Redirect {
     let file_name = format!("{}.md", w.settings().index_page());
@@ -292,7 +304,10 @@ fn index(w: Wiki) -> response::Redirect {
 }
 
 pub fn mount_routes(rocket: Rocket<Build>) -> Rocket<Build> {
-    rocket.mount("/", routes![page, edit_save, edit_view, overview, index])
+    rocket.mount(
+        "/",
+        routes![page, search, edit_save, edit_view, overview, index],
+    )
 }
 
 #[cfg(test)]

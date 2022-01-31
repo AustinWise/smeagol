@@ -48,12 +48,10 @@
                 </a>
             </div>
             <div class="TableObject-item TableObject-item--primary px-2">
-                <!--
                 <form class="search-form" action="/search" method="get" id="search-form">
                     <input type="text" class="form-control input-block" name="q" id="search-query" placeholder="Search"
                         aria-label="Search site" autocomplete="off">
                 </form>
-                -->
             </div>
             <div class="TableObject-item px-2">
                 <div class="BtnGroup d-flex">
@@ -67,7 +65,9 @@
         </div>
     </header>
     <main>
+        {% block title_block %}
         <h1 class="pt-4">{{title}}</h1>
+        {% endblock %}
         <nav aria-label="Breadcrumb">
             <ol>
                 {% block extra_breadcrumbs %}{% endblock %}

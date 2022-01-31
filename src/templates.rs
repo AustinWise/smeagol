@@ -2,6 +2,7 @@ use askama::Template;
 
 use crate::assets::favicon_png_uri;
 use crate::assets::primer_css_uri;
+use crate::wiki::SearchResult;
 
 pub struct Breadcrumb<'a> {
     name: &'a str,
@@ -116,10 +117,7 @@ pub struct DirectoryEntry<'a> {
 
 impl<'a> DirectoryEntry<'a> {
     pub fn new(name: &'a str, href: String) -> Self {
-        DirectoryEntry {
-            name,
-            href,
-        }
+        DirectoryEntry { name, href }
     }
 }
 
@@ -155,6 +153,32 @@ pub fn render_overview(
         breadcrumbs,
         directories,
         files,
+    };
+    template.render()
+}
+
+#[derive(Template)]
+#[template(path = "search_results.html", escape = "none")]
+struct SearchResultsTemplate<'a> {
+    primer_css_uri: &'a str,
+    favicon_png_uri: &'a str,
+    title: &'a str,
+    query: &'a str,
+    documents: Vec<SearchResult>,
+    breadcrumbs: Vec<Breadcrumb<'a>>,
+}
+
+pub fn render_search_results(query: &str, documents: Vec<SearchResult>) -> askama::Result<String> {
+    let primer_css_uri = &primer_css_uri();
+    let favicon_png_uri = &favicon_png_uri();
+    let breadcrumbs = vec![];
+    let template = SearchResultsTemplate {
+        primer_css_uri,
+        favicon_png_uri,
+        title: "Search results",
+        query,
+        breadcrumbs,
+        documents,
     };
     template.render()
 }
