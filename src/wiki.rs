@@ -6,6 +6,7 @@ use tantivy::schema::*;
 use tantivy::Index;
 use tantivy::IndexWriter;
 use tantivy::ReloadPolicy;
+use tantivy::Snippet;
 use tantivy::SnippetGenerator;
 
 use crate::error::MyError;
@@ -124,6 +125,23 @@ fn create_index(settings: &Settings, repository: &RepoBox) -> Result<Index, MyEr
     Ok(index)
 }
 
+// TODO: this does not belong at all in the Wiki, it belongs more in request handeling
+fn highlight(snippet: Snippet) -> String {
+    let mut result = String::new();
+    let mut start_from = 0;
+
+    for fragment_range in snippet.highlighted() {
+        result.push_str(&snippet.fragments()[start_from..fragment_range.start]);
+        result.push_str("<span class=\"color-bg-accent-emphasis color-fg-on-emphasis p-1 rounded mb-4\">");
+        result.push_str(&snippet.fragments()[fragment_range.clone()]);
+        result.push_str("</span>");
+        start_from = fragment_range.end;
+    }
+
+    result.push_str(&snippet.fragments()[start_from..]);
+    result
+}
+
 impl Wiki {
     pub fn new(
         settings: Settings,
@@ -200,7 +218,7 @@ impl Wiki {
                     .text()
                     .unwrap()
                     .to_owned();
-                let snippet_html = snippet.to_html();
+                let snippet_html = highlight(snippet);
                 Some(SearchResult {
                     score,
                     title,
