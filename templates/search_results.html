@@ -1,5 +1,16 @@
 {% extends "layout.html" %}
 
+{% block extra_scripts %}
+<script>
+window.addEventListener('DOMContentLoaded', (event) => {
+    // Place the current search query back into the search box
+    let params = (new URL(document.location)).searchParams
+    let input = document.getElementById('search-query');
+    input.value = params.get('q');
+});
+</script>
+{% endblock %}
+
 {% block title_block %}
 <h1 class="pt-4">
     <span class="f1-light text-gray-light">Search results for</span> {{query}}
