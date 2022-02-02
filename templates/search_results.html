@@ -1,0 +1,56 @@
+{% extends "layout.html" %}
+
+{% block extra_scripts %}
+<script>
+    window.addEventListener('DOMContentLoaded', (event) => {
+        // Place the current search query back into the search box
+        let params = (new URL(document.location)).searchParams
+        let input = document.getElementById('search-query');
+        input.value = params.get('q');
+    });
+</script>
+{% endblock %}
+
+{% block title_block %}
+<h1 class="pt-4">
+    <span class="f1-light text-gray-light">Search results for</span> {{query}}
+</h1>
+{% endblock %}
+
+{% block content %}
+
+<div class="Box Box--condensed search-results">
+    <ul>
+        {% for doc in documents %}
+        <li class="Box-row">
+            <span class="Counter Counter--gray tooltipped tooltipped-w"
+                aria-label="score: {{doc.score}}">{{doc.score}}</span>
+            <span class="text-bold"><a href="/page{{doc.path}}">{{doc.title}}</a></span> <span class="text-gray-light">-
+                {{doc.path}}</span>
+        </li>
+        <div class="Box-row">
+            {{doc.snippet_html}}
+        </div>
+        {% endfor %}
+    </ul>
+</div>
+
+<nav class="paginate-container" aria-label="Pagination">
+    <div class="pagination">
+        {% match prev_url %}
+        {% when Some with (url) %}
+        <a class="previous_page" rel="prev" href="{{url}}" aria-label="Previous Page">Previous</a>
+        {% when None %}
+        <span class="previous_page" aria-disabled="true">Previous</span>
+        {% endmatch %}
+
+        {% match next_url %}
+        {% when Some with (url) %}
+        <a class="next_page" rel="next" href="{{url}}" aria-label="Next Page">Next</a>
+        {% when None %}
+        <span class="next_page" aria-disabled="true">Next</span>
+        {% endmatch %}
+    </div>
+</nav>
+
+{% endblock %}

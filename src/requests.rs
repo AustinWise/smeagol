@@ -14,6 +14,7 @@ use rocket::{Build, Rocket};
 use crate::error::MyError;
 use crate::repository;
 use crate::templates;
+use crate::templates::render_search_results;
 use crate::templates::{
     render_edit_page, render_overview, render_page, render_page_placeholder, Breadcrumb,
 };
@@ -284,6 +285,34 @@ fn overview(path: WikiPagePath, w: Wiki) -> Result<response::content::Html<Strin
     overview_inner(path, w)
 }
 
+fn search_inner(
+    q: &str,
+    offset: Option<usize>,
+    w: Wiki,
+) -> Result<response::content::Html<String>, MyError> {
+    const RESULTS_PER_PAGE: usize = 10;
+    let results = w.search(q, RESULTS_PER_PAGE, offset)?;
+    let prev_url = offset.and_then(|v| {
+        if v >= RESULTS_PER_PAGE {
+            Some(uri!(search(q, Some(v - RESULTS_PER_PAGE))).to_string())
+        } else {
+            None
+        }
+    });
+    let next_url = Some(uri!(search(q, Some(offset.unwrap_or(0) + RESULTS_PER_PAGE))).to_string());
+    let html = render_search_results(q, results, prev_url, next_url)?;
+    Ok(response::content::Html(html))
+}
+
+#[get("/search?<q>&<offset>")]
+fn search(
+    q: &str,
+    offset: Option<usize>,
+    w: Wiki,
+) -> Result<response::content::Html<String>, MyError> {
+    search_inner(q, offset, w)
+}
+
 #[get("/")]
 fn index(w: Wiki) -> response::Redirect {
     let file_name = format!("{}.md", w.settings().index_page());
@@ -292,7 +321,10 @@ fn index(w: Wiki) -> response::Redirect {
 }
 
 pub fn mount_routes(rocket: Rocket<Build>) -> Rocket<Build> {
-    rocket.mount("/", routes![page, edit_save, edit_view, overview, index])
+    rocket.mount(
+        "/",
+        routes![page, search, edit_save, edit_view, overview, index],
+    )
 }
 
 #[cfg(test)]

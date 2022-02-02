@@ -75,7 +75,7 @@ impl MarkupLanguage {
     fn file_extensions(&self) -> &[&str] {
         match self {
             MarkupLanguage::Markdown => {
-                static MARKDOWN_EXTENSIONS: &[&'static str] = &["md"];
+                static MARKDOWN_EXTENSIONS: &[&str] = &["md"];
                 MARKDOWN_EXTENSIONS
             }
         }
@@ -98,6 +98,26 @@ impl MarkupLanguage {
             }
         }
     }
+
+    fn raw(
+        &self,
+        file_stem: &str,
+        file_contents: &str,
+        settings: &Settings,
+    ) -> Result<Page, MyError> {
+        match self {
+            MarkupLanguage::Markdown => {
+                let markdown_page = MarkdownPage::new(settings, file_stem, file_contents);
+
+                let title = markdown_page.title().to_owned();
+
+                Ok(Page {
+                    title,
+                    body: file_contents.to_owned(),
+                })
+            }
+        }
+    }
 }
 
 fn get_language_for_file_extension(file_extension: &str) -> Option<MarkupLanguage> {
@@ -111,6 +131,7 @@ fn get_language_for_file_extension(file_extension: &str) -> Option<MarkupLanguag
     None
 }
 
+/// Gets content of page, rendered as HTML.
 pub fn get_page(
     file_stem: &str,
     file_extension: &str,
@@ -125,6 +146,27 @@ pub fn get_page(
             settings,
         )?)),
     }
+}
+
+/// Gets raw contents of page, after processing metadata
+pub fn get_raw_page(
+    file_stem: &str,
+    file_extension: &str,
+    bytes: &[u8],
+    settings: &Settings,
+) -> Result<Option<Page>, MyError> {
+    match get_language_for_file_extension(file_extension) {
+        None => Ok(None),
+        Some(lang) => Ok(Some(lang.raw(
+            file_stem,
+            std::str::from_utf8(bytes)?,
+            settings,
+        )?)),
+    }
+}
+
+pub fn is_page(file_extension: &str) -> bool {
+    get_language_for_file_extension(file_extension).is_some()
 }
 
 #[cfg(test)]
