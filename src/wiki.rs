@@ -125,14 +125,16 @@ fn create_index(settings: &Settings, repository: &RepoBox) -> Result<Index, MyEr
     Ok(index)
 }
 
-// TODO: this does not belong at all in the Wiki, it belongs more in request handeling
+// TODO: this does not belong at all in the Wiki, it belongs more in request handling
 fn highlight(snippet: Snippet) -> String {
     let mut result = String::new();
     let mut start_from = 0;
 
     for fragment_range in snippet.highlighted() {
         result.push_str(&snippet.fragments()[start_from..fragment_range.start]);
-        result.push_str("<span class=\"color-bg-accent-emphasis color-fg-on-emphasis p-1 rounded mb-4\">");
+        result.push_str(
+            "<span class=\"color-bg-accent-emphasis color-fg-on-emphasis p-1 rounded mb-4\">",
+        );
         result.push_str(&snippet.fragments()[fragment_range.clone()]);
         result.push_str("</span>");
         start_from = fragment_range.end;
@@ -177,7 +179,12 @@ impl Wiki {
         self.0.repository.enumerate_files(directory)
     }
 
-    pub fn search(&self, query: &str) -> Result<Vec<SearchResult>, MyError> {
+    pub fn search(
+        &self,
+        query: &str,
+        num_results: usize,
+        offset: Option<usize>,
+    ) -> Result<Vec<SearchResult>, MyError> {
         let reader = self
             .0
             .index
@@ -192,7 +199,11 @@ impl Wiki {
 
         let query = query_parser.parse_query(query)?;
 
-        let top_docs = searcher.search(&query, &TopDocs::with_limit(10))?;
+        let mut top_docs = TopDocs::with_limit(num_results);
+        if let Some(offset) = offset {
+            top_docs = top_docs.and_offset(offset);
+        }
+        let top_docs = searcher.search(&query, &top_docs)?;
 
         let snippet_generator = SnippetGenerator::create(&searcher, &*query, fields.body)?;
 

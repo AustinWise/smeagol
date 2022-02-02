@@ -166,9 +166,16 @@ struct SearchResultsTemplate<'a> {
     query: &'a str,
     documents: Vec<SearchResult>,
     breadcrumbs: Vec<Breadcrumb<'a>>,
+    prev_url: Option<String>,
+    next_url: Option<String>,
 }
 
-pub fn render_search_results(query: &str, documents: Vec<SearchResult>) -> askama::Result<String> {
+pub fn render_search_results(
+    query: &str,
+    documents: Vec<SearchResult>,
+    prev_url: Option<String>,
+    next_url: Option<String>,
+) -> askama::Result<String> {
     let primer_css_uri = &primer_css_uri();
     let favicon_png_uri = &favicon_png_uri();
     let breadcrumbs = vec![];
@@ -179,6 +186,8 @@ pub fn render_search_results(query: &str, documents: Vec<SearchResult>) -> askam
         query,
         breadcrumbs,
         documents,
+        prev_url,
+        next_url,
     };
     template.render()
 }

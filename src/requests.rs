@@ -285,15 +285,32 @@ fn overview(path: WikiPagePath, w: Wiki) -> Result<response::content::Html<Strin
     overview_inner(path, w)
 }
 
-fn search_inner(q: &str, w: Wiki) -> Result<response::content::Html<String>, MyError> {
-    let results = w.search(q)?;
-    let html = render_search_results(q, results)?;
+fn search_inner(
+    q: &str,
+    offset: Option<usize>,
+    w: Wiki,
+) -> Result<response::content::Html<String>, MyError> {
+    const RESULTS_PER_PAGE: usize = 10;
+    let results = w.search(q, RESULTS_PER_PAGE, offset)?;
+    let prev_url = offset.and_then(|v| {
+        if v >= RESULTS_PER_PAGE {
+            Some(uri!(search(q, Some(v - RESULTS_PER_PAGE))).to_string())
+        } else {
+            None
+        }
+    });
+    let next_url = Some(uri!(search(q, Some(offset.unwrap_or(0) + RESULTS_PER_PAGE))).to_string());
+    let html = render_search_results(q, results, prev_url, next_url)?;
     Ok(response::content::Html(html))
 }
 
-#[get("/search?<q>")]
-fn search(q: &str, w: Wiki) -> Result<response::content::Html<String>, MyError> {
-    search_inner(q, w)
+#[get("/search?<q>&<offset>")]
+fn search(
+    q: &str,
+    offset: Option<usize>,
+    w: Wiki,
+) -> Result<response::content::Html<String>, MyError> {
+    search_inner(q, offset, w)
 }
 
 #[get("/")]
