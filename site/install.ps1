@@ -48,32 +48,31 @@ namespace TEMP_NAMESPACE_REPLACE_ME
     {
         [DllImport("kernel32", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        private static extern bool IsWow64Process2(SafeProcessHandle handle, out ushort pProcessMachine, out ushort pNativeMachine);
-
+        static extern bool IsWow64Process2(SafeProcessHandle handle, out ushort pProcessMachine, out ushort pNativeMachine);
 
         [StructLayout(LayoutKind.Sequential)]
-        internal struct SYSTEM_INFO
+        struct SYSTEM_INFO
         {
-            internal ushort wProcessorArchitecture;
-            internal ushort wReserved;
-            internal int dwPageSize;
-            internal IntPtr lpMinimumApplicationAddress;
-            internal IntPtr lpMaximumApplicationAddress;
-            internal IntPtr dwActiveProcessorMask;
-            internal int dwNumberOfProcessors;
-            internal int dwProcessorType;
-            internal int dwAllocationGranularity;
-            internal short wProcessorLevel;
-            internal short wProcessorRevision;
+            public ushort wProcessorArchitecture;
+            ushort wReserved;
+            int dwPageSize;
+            IntPtr lpMinimumApplicationAddress;
+            IntPtr lpMaximumApplicationAddress;
+            IntPtr dwActiveProcessorMask;
+            int dwNumberOfProcessors;
+            int dwProcessorType;
+            int dwAllocationGranularity;
+            short wProcessorLevel;
+            short wProcessorRevision;
         }
 
-        internal const int PROCESSOR_ARCHITECTURE_INTEL = 0;
-        internal const int PROCESSOR_ARCHITECTURE_ARM = 5;
-        internal const int PROCESSOR_ARCHITECTURE_AMD64 = 9;
-        internal const int PROCESSOR_ARCHITECTURE_ARM64 = 12;
+        const int PROCESSOR_ARCHITECTURE_INTEL = 0;
+        const int PROCESSOR_ARCHITECTURE_ARM = 5;
+        const int PROCESSOR_ARCHITECTURE_AMD64 = 9;
+        const int PROCESSOR_ARCHITECTURE_ARM64 = 12;
 
         [DllImport("kernel32")]
-        internal static extern void GetNativeSystemInfo(out SYSTEM_INFO lpSystemInfo);
+        static extern void GetNativeSystemInfo(out SYSTEM_INFO lpSystemInfo);
 
         public int GetArchitecture()
         {
@@ -163,7 +162,7 @@ namespace TEMP_NAMESPACE_REPLACE_ME
 
 $file_extractor_namespace = "NS_" + [System.Guid]::NewGuid().ToString("N")
 $file_extractor_source = $file_extractor_source.Replace("TEMP_NAMESPACE_REPLACE_ME", $file_extractor_namespace)
-Add-Type -TypeDefinition $file_extractor_source -ReferencedAssemblies @("System.IO.Compression", "System.IO.Compression.FileSystem")
+Add-Type -TypeDefinition $file_extractor_source -ReferencedAssemblies @("System.IO.Compression", "System.IO.Compression.FileSystem", "System.Diagnostics.Process", "System.Linq", "System.ComponentModel.Primitives", "Microsoft.Win32.Primitives", "System.IO.Compression.ZipFile", "System.Collections")
 $helper = new-object -TypeName "$file_extractor_namespace.helper"
 
 function Detect-Target {
@@ -246,7 +245,7 @@ if ($ndx -lt 0) {
     $split += $path_entry
     $joined = [System.String]::Join(";", $split)
     [System.Environment]::SetEnvironmentVariable("PATH", $joined, [System.EnvironmentVariableTarget]::User);
-    Write-Host "Update PATH. Please retstart your terminals."
+    Write-Host "Update PATH. Please restart your terminals and command prompts."
 }
 
 Write-Host "Run the program by typing '$Crate' in a terminal."
