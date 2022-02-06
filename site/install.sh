@@ -91,9 +91,12 @@ main() {
     local _src_exe="${_temp_dir}/${_crate}-${_version}-${_arch}/${_crate}${_exe_ext}"
     local _dest_exe="${_install_dir}/${_crate}${_exe_ext}"
     ensure cp "$_src_exe" "$_dest_exe"
-    ensure chmod +x "$_dest_exe"
-
+    ensure chmod u+x "$_dest_exe"
     say "Installed to: ${_dest_exe}"
+
+    ignore rm -r "$_temp_dir"
+
+    return 0
 }
 
 # XXX SMEAGOL: the rust of the file is copied for rustup-init.sh, with changes
