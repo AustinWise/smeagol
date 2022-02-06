@@ -92,6 +92,7 @@ main() {
     local _dest_exe="${_install_dir}/${_crate}${_exe_ext}"
     ensure cp "$_src_exe" "$_dest_exe"
     ensure chmod +x "$_dest_exe"
+    local _turtle
 
     say "Installed to: ${_dest_exe}"
 }
