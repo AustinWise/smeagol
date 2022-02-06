@@ -1,11 +1,11 @@
 param (
-    [Parameter(Mandatory = $true,
+    [Parameter( #Mandatory = $true,
     HelpMessage = 'Enter the name of the GitHub repo. For example: AustinWise/smeagol')]
-    [string]$GitHub,
+    [string]$GitHub = 'AustinWise/smeagol',
     [Parameter(HelpMessage = 'The target triple, for example x86_64-pc-windows-msvc. By default this is detected automatically.')]
     [string]$Target,
     [Parameter(HelpMessage = 'The name of the crate to download. By default it is the same as the repository name.')]
-    [string]$Crate,
+    [string]$Crate = 'smeagol-wiki',
     [Parameter(HelpMessage = 'Whether to show a progress bar. Disabled by default because it greatly increase the amount of time a download takes.')]
     [switch]$ShowProgressBar,
     [Parameter(HelpMessage = 'Which version to download. By default the latest version is downloaded')]
@@ -26,10 +26,10 @@ if ([System.Environment]::OSVersion.Platform -ne [System.PlatformID]::Win32NT) {
     throw "This script is only supported on Windows. On unix-like systems, use the shell script.";
 }
 
-$bin_folder_name = ".kame-app"
-$bin_dir = [System.IO.Path]::Combine($env:USERPROFILE, $bin_folder_name)
-if (!(Test-Path $bin_dir)) {
-    mkdir $bin_dir -Force
+$bin_folder_name = ".kame-get"
+$bin_dir = Join-Path $env:USERPROFILE $bin_folder_name
+if (-not (Test-Path $bin_dir)) {
+    New-Item -Path $bin_dir -Force -ItemType 'Directory' | Out-Null
 }
 
 $file_extractor_source = @"
