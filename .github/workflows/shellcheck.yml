@@ -1,0 +1,21 @@
+
+name: shellcheck
+on:
+  pull_request:
+    paths:
+      - '**.sh'
+  push:
+    branches:
+    - master
+    paths:
+      - '**.sh'
+jobs:
+  shellcheck:
+    runs-on: ubuntu-20.04
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+    - name: Shellcheck
+      shell: bash
+      run: |
+        shellcheck site/install.sh
