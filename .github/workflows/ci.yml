@@ -34,15 +34,25 @@ jobs:
       uses: actions/checkout@v2
 
     # See: https://github.com/actions/cache/blob/main/examples.md#rust---cargo
-    - uses: actions/cache@v2
+    # And also https://github.com/rust-lang/rustup/blob/25dc87dc605adc0843c9369063333997ae806008/.github/workflows/linux-builds-on-stable.yaml#L81
+    - name: Cache cargo registry and git trees
+      uses: actions/cache@v2
       with:
         path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-          target/
-        key: ${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          ~/.cargo/registry
+          ~/.cargo/git
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    - name: Get rustc commit hash
+      id: cargo-target-cache
+      run: |
+        echo "::set-output name=rust_hash::$(rustc -Vv | grep commit-hash | awk '{print $2}')"
+      shell: bash
+    - name: Cache cargo build
+      uses: actions/cache@v2
+      with:
+        path: target
+        key: ${{ github.base_ref }}-${{ github.head_ref }}-${{ matrix.target }}-cargo-target-dir-${{ steps.cargo-target-cache.outputs.rust_hash }}-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: ${{ github.base_ref }}-${{ matrix.target }}-cargo-target-dir-${{ steps.cargo-target-cache.outputs.rust_hash }}-${{ hashFiles('**/Cargo.lock') }}
 
     - name: cargo build
       uses: actions-rs/cargo@v1
@@ -53,3 +63,8 @@ jobs:
       uses: actions-rs/cargo@v1
       with:
         command: test
+
+    - name: Clear the cargo caches
+      run: |
+        cargo install cargo-cache --no-default-features --features ci-autoclean
+        cargo-cache
