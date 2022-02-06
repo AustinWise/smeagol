@@ -1,5 +1,5 @@
 
-name: ci
+name: shellcheck
 on:
   pull_request:
     paths:
