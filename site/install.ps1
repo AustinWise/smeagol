@@ -241,7 +241,7 @@ $existing_path = [System.Environment]::GetEnvironmentVariable("PATH", [System.En
 $ndx = $existing_path.IndexOf($path_entry, [System.StringComparison]::OrdinalIgnoreCase)
 if ($ndx -lt 0) {
     Write-Host "Adding $path_entry to PATH"
-    $split = $existing_path.Split(";")
+    $split = $existing_path.Split(";", [System.StringSplitOptions]::RemoveEmptyEntries)
     $split += $path_entry
     $joined = [System.String]::Join(";", $split)
     [System.Environment]::SetEnvironmentVariable("PATH", $joined, [System.EnvironmentVariableTarget]::User);
