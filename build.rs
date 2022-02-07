@@ -139,5 +139,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     )?;
     writeln!(generated_file, "}}")?;
 
+    let target = env::var("TARGET")?;
+    if target.ends_with("-msvc") {
+        println!("cargo:rerun-if-changed=windows_manifest.xml");
+        println!("cargo:rustc-link-arg-bins=/MANIFEST:embed");
+        println!("cargo:rustc-link-arg-bins=/MANIFESTINPUT:windows_manifest.xml");
+    }
+
+
     Ok(())
 }
