@@ -99,22 +99,23 @@ impl MarkupLanguage {
         }
     }
 
-    fn raw(
+    fn raw<S: Into<String>>(
         &self,
         file_stem: &str,
-        file_contents: &str,
+        file_contents: S,
         settings: &Settings,
-    ) -> Result<Page, MyError> {
+    ) -> Page {
+        let file_contents: String = file_contents.into();
         match self {
             MarkupLanguage::Markdown => {
-                let markdown_page = MarkdownPage::new(settings, file_stem, file_contents);
+                let markdown_page = MarkdownPage::new(settings, file_stem, &file_contents);
 
                 let title = markdown_page.title().to_owned();
 
-                Ok(Page {
+                Page {
                     title,
-                    body: file_contents.to_owned(),
-                })
+                    body: file_contents,
+                }
             }
         }
     }
@@ -161,7 +162,7 @@ pub fn get_raw_page(
             file_stem,
             std::str::from_utf8(bytes)?,
             settings,
-        )?)),
+        ))),
     }
 }
 

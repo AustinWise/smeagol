@@ -77,21 +77,51 @@ fn index_directory(
                     if is_page(file_ext) {
                         let mut path = dir.clone();
                         path.push(&file_name);
-                        let bytes = repository.read_file(&path)?;
-                        if let Ok(Some(page)) = get_raw_page(file_stem, file_ext, &bytes, settings)
-                        {
-                            let mut url = String::new();
-                            for path in path {
-                                url += "/";
-                                url += path;
+                        let bytes = match repository.read_file(&path) {
+                            Ok(bytes) => bytes,
+                            Err(err) => {
+                                println!(
+                                    "Failed to open file '{}' for indexing: {:?}",
+                                    path.join("/"),
+                                    err
+                                );
+                                continue;
                             }
+                        };
+                        match get_raw_page(file_stem, file_ext, &bytes, settings) {
+                            Ok(Some(page)) => {
+                                let mut url = String::new();
+                                for path in path {
+                                    url += "/";
+                                    url += path;
+                                }
 
-                            let mut doc = Document::default();
-                            doc.add_text(search_fields.path, url);
-                            doc.add_text(search_fields.title, page.title);
-                            doc.add_text(search_fields.body, page.body);
+                                let mut doc = Document::default();
+                                doc.add_text(search_fields.path, url);
+                                doc.add_text(search_fields.title, page.title);
+                                doc.add_text(search_fields.body, page.body);
 
-                            index_writer.add_document(doc);
+                                index_writer.add_document(doc);
+                            }
+                            Ok(None) => {
+                                unreachable!(
+                                    "We should have already checked to see if this was a page."
+                                );
+                            }
+                            Err(MyError::BadUtf8 { source }) => {
+                                println!(
+                                    "Bad UTF-8 in file, not indexing. See byte position {} in {}",
+                                    source.valid_up_to(),
+                                    path.join("/")
+                                );
+                            }
+                            Err(err) => {
+                                println!(
+                                    "Failed to parse file '{}' for indexing: {}",
+                                    path.join("/"),
+                                    err
+                                );
+                            }
                         }
                     }
                 }
@@ -111,8 +141,9 @@ fn create_index(settings: &Settings, repository: &RepoBox) -> Result<Index, MyEr
     let index = Index::create_in_ram(schema.clone());
 
     let mut index_writer = index.writer(50_000_000)?;
-
     let search_fields = SearchFields::from_schema(&schema);
+
+    println!("Indexing files, this can take a while if there are a lot.");
     index_directory(
         settings,
         repository,
