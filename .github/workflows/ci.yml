@@ -36,6 +36,7 @@ jobs:
     # See: https://github.com/actions/cache/blob/main/examples.md#rust---cargo
     # And also https://github.com/rust-lang/rustup/blob/25dc87dc605adc0843c9369063333997ae806008/.github/workflows/linux-builds-on-stable.yaml#L81
     - name: Cache cargo registry and git trees
+      id: do-cache-cargo
       uses: actions/cache@v2
       with:
         path: |
@@ -48,11 +49,18 @@ jobs:
         echo "::set-output name=rust_hash::$(rustc -Vv | grep commit-hash | awk '{print $2}')"
       shell: bash
     - name: Cache cargo build
+      id: do-cache-target
       uses: actions/cache@v2
       with:
         path: target
         key: ${{ github.base_ref }}-${{ github.head_ref }}-${{ matrix.target }}-cargo-target-dir-${{ steps.cargo-target-cache.outputs.rust_hash }}-${{ hashFiles('**/Cargo.lock') }}
         restore-keys: ${{ github.base_ref }}-${{ matrix.target }}-cargo-target-dir-${{ steps.cargo-target-cache.outputs.rust_hash }}-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        profile: minimal
 
     - name: cargo build
       uses: actions-rs/cargo@v1
@@ -65,6 +73,8 @@ jobs:
         command: test
 
     - name: Clear the cargo caches
+      if: ${{ ! steps.do-cache-cargo.outputs.cache-hit }}
       run: |
         cargo install cargo-cache --no-default-features --features ci-autoclean
         cargo-cache
+
