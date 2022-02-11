@@ -1,4 +1,4 @@
-WIP
+0.3.0 (2022-02-10)
 ===
 
 * Add overview, which allows browsing files and folders [#8](https://github.com/AustinWise/smeagol/issues/8)
