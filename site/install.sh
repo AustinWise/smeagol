@@ -6,8 +6,8 @@
 # * Download the software
 # * Extract the software
 # * Install the executable into a bin directory
-# The following would be nice, but is not currently implemented
 # * Find the latest GitHub release of the software
+# The following would be nice, but is not currently implemented
 # * Update the PATH for the shell to reference the bin folder
 
 # This script is based in part on:
@@ -35,6 +35,7 @@ main() {
     need_cmd rm
     need_cmd rmdir
     need_cmd tar
+    need_cmd tr
 
     get_architecture || return 1
     local _arch="$RETVAL"
@@ -59,7 +60,13 @@ main() {
             ;;
     esac
 
-    local _version="0.2.1"
+    # TODO: consider if we can use the downloader function somehow to support wget also
+    local _version 
+    _version=$(curl -SsfI https://github.com/AustinWise/smeagol/releases/latest | grep '^location: ' | sed -e 's$.*/$$' | tr -d '\r\n')
+    if [ -z "${_version}" ]; then
+        err "Failed to find detect latest version"
+    fi
+    
     local _crate="smeagol-wiki"
     local _url="https://github.com/AustinWise/smeagol/releases/download/${_version}/${_crate}-${_version}-${_arch}${_archive_ext}"
 
