@@ -166,7 +166,7 @@ $helper = new-object -TypeName "$file_extractor_namespace.helper"
 function Detect-Target {
     switch ($helper.GetArchitecture()) {
         0 { $target_arch = "i686" }
-        5 { throw "As of Rust 1.58, 32-bit ARM on Windows is not supported. thumbv7a-pc-windows-msvc only has tier 3 support: https://doc.rust-lang.org/nightly/rustc/platform-support.html" }
+        5 { $target_arch = "thumbv7a" }
         9 { $target_arch = "x86_64" }
         12 { $target_arch = "aarch64" }
         # TODO: add a more useful help message, like saying to file a bug or update something
