@@ -36,6 +36,7 @@ main() {
     need_cmd rmdir
     need_cmd tar
     need_cmd tr
+    need_cmd curl
 
     get_architecture || return 1
     local _arch="$RETVAL"

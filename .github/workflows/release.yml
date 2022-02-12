@@ -25,7 +25,6 @@ jobs:
       upload_url: ${{ steps.release.outputs.upload_url }}
     env:
       RELEASE_BODY_FILE_NAME: __release_body_file_dont_commit__.txt
-      RELEASE_VERSION_FILE_NAME: __release_version_dont_commit__.txt
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -49,18 +48,6 @@ jobs:
           draft: true
           body_path: ${{ env.RELEASE_BODY_FILE_NAME }}
           prerelease: ${{ contains(github.ref_name, '-') }}
-      # To make it easier to write a bash script to download the latest release,
-      # include a file with the name of the release. With it we can write something like:
-      #   curl program-$(curl -s version.txt)-target.tar.gz
-      - name: Upload version name
-        uses: actions/upload-release-asset@v1.0.2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.release.outputs.upload_url }}
-          asset_path: ${{ env.RELEASE_VERSION_FILE_NAME }}
-          asset_name: version.txt
-          asset_content_type: text/plain
 
   build-release:
     needs: ["create-release"]

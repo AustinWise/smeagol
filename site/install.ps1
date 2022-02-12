@@ -84,16 +84,14 @@ namespace TEMP_NAMESPACE_REPLACE_ME
                     throw new Win32Exception();
                 switch (native)
                 {
-                    case 0x014c:
+                    case 0x014c: // IMAGE_FILE_MACHINE_I386
                         return PROCESSOR_ARCHITECTURE_INTEL;
-                    case 0x8664:
+                    case 0x8664: // IMAGE_FILE_MACHINE_AMD64
                         return PROCESSOR_ARCHITECTURE_AMD64;
-                    case 0xAA64:
-                        return PROCESSOR_ARCHITECTURE_ARM64;
-                    //TODO:figure out which is correct
-                    case 0x01c0: //ARM Little-Endian
-                    case 0x01c2: //ARM Thumb/Thumb-2 Little-Endian
+                    case 0x01c4: // IMAGE_FILE_MACHINE_ARMNT
                         return PROCESSOR_ARCHITECTURE_ARM;
+                    case 0xAA64: // IMAGE_FILE_MACHINE_ARM64
+                        return PROCESSOR_ARCHITECTURE_ARM64;
                     default:
                         throw new Exception("Unknown architecture: " + native.ToString("X"));
                 }
