@@ -7,5 +7,5 @@
 
 # Statically link the MSVC C Runtime on Windows, so the EXEs can run without
 # installing the C Runtime DLL.
-[target.'cfg(all(target_env = "msvc"))']
-rustflags = ["-C", "target-feature=+crt-static"]
+#[target.'cfg(all(target_env = "msvc"))']
+#rustflags = ["-C", "target-feature=+crt-static"]

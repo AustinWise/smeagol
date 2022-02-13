@@ -6,6 +6,15 @@ pub enum MyError {
     GitRepoDoesNotExist {
         path: std::path::PathBuf
     },
+    #[error("Failed to open Git repo: {err}")]
+    GitRepoDoesFailedToOpen {
+        err: git2::Error
+    },
+    #[error("Error when performing git operation: {source}")]
+    GitError {
+        #[from]
+        source: git2::Error
+    },
     #[error("Path is not valid.")]
     InvalidPath,
     #[error("io error")]
