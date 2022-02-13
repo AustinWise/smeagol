@@ -111,6 +111,7 @@ jobs:
           toolchain: stable
           override: true
           target: ${{ matrix.target }}
+          profile: minimal
 
       - uses: actions-rs/cargo@v1
         with:
