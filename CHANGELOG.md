@@ -1,6 +1,12 @@
 WIP
 ===
 
+* Rename the settings in `smeagol.toml` to use kebob-case, rather than
+  snake_case. Specifically `h1_title` was renamed to `h1-title` and `index_page`
+  was renamed to `index-page`. This matches `Cargo.toml`'s use of kebob-case.
+* Switch the `index-page` default value to `README`. This matches GitHub's
+  behavior. Previously this value was `Home`.
+
 0.3.0 (2022-02-10)
 =====
 

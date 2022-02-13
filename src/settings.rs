@@ -25,8 +25,10 @@ struct Args {
 #[derive(Default, Deserialize)]
 struct Config {
     /// The name of the index page. "Home" by default.
+    #[serde(rename = "index-page")]
     index_page: Option<String>,
     /// Whether the first H1 should become the title of a page.
+    #[serde(rename = "h1-title")]
     h1_title: Option<bool>,
 }
 
@@ -103,7 +105,7 @@ pub fn parse_settings_from_args() -> Result<Settings, MyError> {
 
     let ret = Settings {
         git_repo,
-        index_page: config.index_page.unwrap_or_else(|| "Home".into()),
+        index_page: config.index_page.unwrap_or_else(|| "README".into()),
         h1_title: config.h1_title.unwrap_or(false),
         host: args
             .host

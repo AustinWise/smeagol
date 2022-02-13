@@ -34,6 +34,36 @@ When run without arguments, the current directory is used.
 
 Once started, it listens on http://127.0.0.1:8000 by default.
 
+## Configuration
+
+There are a few command line options:
+
+* `--host` - takes an argument that specifies which IP address to bind to. By
+  default this is `127.0.0.1`, which means only users on your local computer can
+  access the wiki. Set to `0.0.0.0` to let other computers on your network
+  access it.
+* `--port` - takes an argument that specifies which port to listen on. `8000` by
+  default.
+
+Additionally, the following settings can be put in a `smeagol.toml` file in the
+root directory of the wiki:
+
+* `index-page` - By default `README`. When you browse to a directory, Smeagol
+  will display a file whose name (not including the extension) is `index-page`.
+  For example, when you navigate to `/page/for/bar/`, Smeagol will display the
+  file at `foo/bar/README.md`.
+* `h1-title` - By default `false`. When false, Smeagol will use the file name
+  as the title of the page. This title will be displayed at the top of the page
+  and in the title bar. When this setting is true and a document starts with an
+  `h1` (written as a line that starts with `#` in Markdown), the text of this
+  `h1` will be used as the title of the page. It will not be rendered as a
+  normal part of the document.
+
+## Differences from Gollum
+
+* `index-page` on Gollum defaults to `Home`. Smeagol defaults to `README` to be
+  compatible with online code hosting systems such as GitHub and Azure Devops.
+
 ## Why Rust, please tell me more about why you love Rust
 
 Rust makes it easy to ship cross-compiled executables that run without much fuss.
