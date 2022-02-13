@@ -36,7 +36,6 @@ jobs:
           else
             echo "test release, please ignore" > $RELEASE_BODY_FILE_NAME
           fi
-          echo "${{ github.ref_name }}" > $RELEASE_VERSION_FILE_NAME
       - name: Create GitHub release
         id: release
         uses: actions/create-release@v1.1.4
