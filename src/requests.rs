@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use rocket::form::Form;
 use rocket::http::impl_from_uri_param_identity;
 use rocket::http::uri::fmt::Formatter;
@@ -13,6 +15,7 @@ use rocket::{Build, Rocket};
 
 use crate::error::MyError;
 use crate::repository;
+use crate::repository::RepositoryCapability;
 use crate::templates;
 use crate::templates::render_search_results;
 use crate::templates::{
@@ -157,6 +160,22 @@ impl<'r, 'o: 'r> Responder<'r, 'o> for MyError {
 #[derive(FromForm)]
 struct PageEditForm<'r> {
     content: &'r str,
+    message: &'r str,
+}
+
+fn edit_save_inner(
+    path: WikiPagePath,
+    content: Form<PageEditForm<'_>>,
+    w: Wiki,
+) -> Result<response::Redirect, MyError> {
+    let message = if content.message.trim().is_empty() {
+        let message = default_edit_message(&path);
+        Cow::Owned(message)
+    } else {
+        Cow::Borrowed(content.message.trim())
+    };
+    w.write_file(&path.segments, &message, content.content)?;
+    Ok(response::Redirect::to(uri!(page(path))))
 }
 
 #[post("/edit/<path..>", data = "<content>")]
@@ -165,31 +184,44 @@ fn edit_save(
     content: Form<PageEditForm<'_>>,
     w: Wiki,
 ) -> Result<response::Redirect, MyError> {
-    w.write_file(&path.segments, content.content)?;
-    Ok(response::Redirect::to(uri!(page(path))))
+    edit_save_inner(path, content, w)
 }
 
 fn default_edit_message(path: &WikiPagePath) -> String {
     format!("Update {}", path.file_name().expect("Ill-formed path"))
 }
 
-#[get("/edit/<path..>")]
-fn edit_view(path: WikiPagePath, w: Wiki) -> Result<response::content::Html<String>, MyError> {
+fn edit_view_inner(
+    path: WikiPagePath,
+    w: Wiki,
+) -> Result<response::content::Html<String>, MyError> {
     let content = w.read_file(&path.segments).unwrap_or_else(|_| vec![]);
     let content = std::str::from_utf8(&content)?;
     let post_url = uri!(edit_save(&path));
     let view_url = uri!(page(&path));
     let title = format!("Editing {}", path.file_name().expect("Ill-formed path"));
-    let message_placeholder = default_edit_message(&path);
+    let message_placeholder = if w
+        .repo_capabilities()
+        .contains(RepositoryCapability::SUPPORTS_EDIT_MESSAGE)
+    {
+        Some(default_edit_message(&path))
+    } else {
+        None
+    };
     let html = render_edit_page(
         &title,
         &post_url.to_string(),
         &view_url.to_string(),
-        &message_placeholder,
+        message_placeholder,
         content,
         path.page_breadcrumbs(),
     )?;
     Ok(response::content::Html(html))
+}
+
+#[get("/edit/<path..>")]
+fn edit_view(path: WikiPagePath, w: Wiki) -> Result<response::content::Html<String>, MyError> {
+    edit_view_inner(path, w)
 }
 
 fn page_response(

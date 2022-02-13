@@ -1,13 +1,21 @@
 use std::{
     io::{Read, Write},
     ops::{Deref, DerefMut},
-    path::PathBuf,
+    path::{Path, PathBuf},
     sync::Mutex,
 };
 
-use git2::ObjectType;
+use bitflags::bitflags;
+use git2::Index;
+use git2::{IndexEntry, IndexTime, ObjectType};
 
 use crate::error::MyError;
+
+bitflags! {
+    pub struct RepositoryCapability: u32 {
+        const SUPPORTS_EDIT_MESSAGE = 0b00000001;
+    }
+}
 
 //TODO: it is possible to use a borrowed string? Would that reduce copies?
 #[derive(Debug, PartialEq, PartialOrd, Eq, Ord)]
@@ -17,8 +25,9 @@ pub enum RepositoryItem {
 }
 
 pub trait Repository {
+    fn capabilities(&self) -> RepositoryCapability;
     fn read_file(&self, file_path: &[&str]) -> Result<Vec<u8>, MyError>;
-    fn write_file(&self, file_path: &[&str], content: &str) -> Result<(), MyError>;
+    fn write_file(&self, file_path: &[&str], message: &str, content: &str) -> Result<(), MyError>;
     fn directory_exists(&self, path: &[&str]) -> Result<bool, MyError>;
     fn enumerate_files(&self, directory: &[&str]) -> Result<Vec<RepositoryItem>, MyError>;
 }
@@ -65,6 +74,10 @@ impl FileSystemRepository {
 }
 
 impl Repository for FileSystemRepository {
+    fn capabilities(&self) -> RepositoryCapability {
+        RepositoryCapability::empty()
+    }
+
     fn read_file(&self, file_path: &[&str]) -> Result<Vec<u8>, MyError> {
         let path = self.canonicalize_path(file_path)?;
         let mut f = std::fs::File::open(path)?;
@@ -73,7 +86,7 @@ impl Repository for FileSystemRepository {
         Ok(buf)
     }
 
-    fn write_file(&self, file_path: &[&str], content: &str) -> Result<(), MyError> {
+    fn write_file(&self, file_path: &[&str], _message: &str, content: &str) -> Result<(), MyError> {
         let path = self.canonicalize_path(file_path)?;
         let mut f = std::fs::File::create(path)?;
         f.write_all(content.as_bytes())?;
@@ -117,6 +130,7 @@ impl Repository for FileSystemRepository {
 }
 
 struct GitRepository {
+    path: PathBuf,
     repo: Mutex<git2::Repository>,
 }
 
@@ -144,6 +158,10 @@ fn get_git_dir<'repo>(
 }
 
 impl Repository for GitRepository {
+    fn capabilities(&self) -> RepositoryCapability {
+        RepositoryCapability::SUPPORTS_EDIT_MESSAGE
+    }
+
     fn read_file(&self, file_path: &[&str]) -> Result<Vec<u8>, MyError> {
         let (filename, file_paths) = match file_path.split_last() {
             Some(tup) => tup,
@@ -168,8 +186,31 @@ impl Repository for GitRepository {
         }
     }
 
-    fn write_file(&self, _file_path: &[&str], _content: &str) -> Result<(), MyError> {
-        todo!()
+    fn write_file(&self, file_path: &[&str], message: &str, content: &str) -> Result<(), MyError> {
+        if file_path.is_empty() {
+            return Err(MyError::InvalidPath);
+        }
+
+        let file_path = file_path.join("/");
+
+        let repo = self.repo.lock().unwrap();
+
+        let mut path = self.path.clone();
+        path.push(&file_path);
+        let path = path.canonicalize()?;
+        if !path.starts_with(&self.path) {
+            return Err(MyError::InvalidPath);
+        }
+
+        // TODO: maybe write the file directly into the index or as a tree.
+        // This would support bare Git repos.
+        std::fs::write(&path, content)?;
+
+        let mut index = repo.index()?;
+        index.add_path(&Path::new(&file_path))?;
+        index.write()?;
+
+        Ok(())
     }
 
     fn directory_exists(&self, path: &[&str]) -> Result<bool, MyError> {
@@ -195,13 +236,17 @@ impl Repository for GitRepository {
 }
 
 pub fn create_git_repository(dir_path: PathBuf) -> Result<RepoBox, MyError> {
-    let repo = match git2::Repository::open(dir_path) {
+    let repo = match git2::Repository::open(&dir_path) {
         Ok(repo) => repo,
         Err(err) => {
             return Err(MyError::GitRepoDoesFailedToOpen { err });
         }
     };
+    if repo.is_bare() {
+        return Err(MyError::BareGitRepo);
+    }
     Ok(RepoBox(Box::new(GitRepository {
+        path: dir_path,
         repo: Mutex::new(repo),
     })))
 }

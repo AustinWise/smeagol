@@ -13,6 +13,7 @@ use crate::error::MyError;
 use crate::page::get_raw_page;
 use crate::page::is_page;
 use crate::repository::RepoBox;
+use crate::repository::RepositoryCapability;
 use crate::repository::RepositoryItem;
 use crate::settings::Settings;
 
@@ -180,10 +181,7 @@ fn highlight(snippet: Snippet) -> String {
 }
 
 impl Wiki {
-    pub fn new(
-        settings: Settings,
-        repository: RepoBox,
-    ) -> Result<Self, MyError> {
+    pub fn new(settings: Settings, repository: RepoBox) -> Result<Self, MyError> {
         let index = create_index(&settings, &repository)?;
         let inner = WikiInner {
             settings,
@@ -197,12 +195,21 @@ impl Wiki {
         &self.0.settings
     }
 
+    pub fn repo_capabilities(&self) -> RepositoryCapability {
+        self.0.repository.capabilities()
+    }
+
     pub fn read_file(&self, file_path: &[&str]) -> Result<Vec<u8>, MyError> {
         self.0.repository.read_file(file_path)
     }
 
-    pub fn write_file(&self, file_path: &[&str], content: &str) -> Result<(), MyError> {
-        self.0.repository.write_file(file_path, content)
+    pub fn write_file(
+        &self,
+        file_path: &[&str],
+        message: &str,
+        content: &str,
+    ) -> Result<(), MyError> {
+        self.0.repository.write_file(file_path, message, content)
     }
 
     pub fn directory_exists(&self, path: &[&str]) -> Result<bool, MyError> {

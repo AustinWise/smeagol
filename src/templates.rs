@@ -85,7 +85,7 @@ struct EditTemplate<'a> {
     title: &'a str,
     post_url: &'a str,
     view_url: &'a str,
-    message_placeholder: &'a str,
+    message_placeholder: Option<String>,
     content: &'a str,
     breadcrumbs: Vec<Breadcrumb<'a>>,
 }
@@ -94,7 +94,7 @@ pub fn render_edit_page(
     title: &str,
     post_url: &str,
     view_url: &str,
-    message_placeholder: &str,
+    message_placeholder: Option<String>,
     content: &str,
     breadcrumbs: Vec<Breadcrumb<'_>>,
 ) -> askama::Result<String> {

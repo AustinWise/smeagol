@@ -16,8 +16,12 @@
             <textarea id="content" name="content" class="form-control edit_text_area">{{content}}</textarea>
         </div>
         <div>
-            <input type="text" name="message" class="form-control input-block" id="gollum-editor-message-field"
-                placeholder="{{message_placeholder}}">
+            {% match message_placeholder %}
+            {% when Some with (val) %}
+            <input type="text" name="message" class="form-control input-block" placeholder="{{val}}">
+            {% when None %}
+            <input type="hidden" name="message" placeholder="edit message not supported">
+            {% endmatch %}
         </div>
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">Commit changes</button>

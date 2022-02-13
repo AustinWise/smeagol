@@ -1699,6 +1699,7 @@ name = "smeagol-wiki"
 version = "0.3.1"
 dependencies = [
  "askama",
+ "bitflags",
  "clap",
  "git2",
  "log",
