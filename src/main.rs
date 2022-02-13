@@ -10,8 +10,9 @@ mod settings;
 mod templates;
 mod wiki;
 
+use clap::StructOpt;
 use error::MyError;
-use repository::create_file_system_repository;
+use repository::create_repository;
 use settings::parse_settings_from_args;
 use wiki::Wiki;
 
@@ -21,9 +22,13 @@ use rocket::request::{FromRequest, Outcome, Request};
 static WIKI: OnceCell<Wiki> = OnceCell::new();
 
 fn create_wiki() -> Result<Wiki, MyError> {
-    let settings = parse_settings_from_args()?;
-    let repo = create_file_system_repository(settings.git_repo().clone())?;
-    Wiki::new(settings, Box::new(repo))
+    let args = settings::Args::parse();
+    let git_repo = args
+        .git_repo()
+        .unwrap_or_else(|| std::env::current_dir().unwrap());
+    let repo = create_repository(args.use_fs(), git_repo)?;
+    let settings = parse_settings_from_args(args, &repo)?;
+    Wiki::new(settings, repo)
 }
 
 #[rocket::async_trait]

@@ -13,7 +13,6 @@ use crate::error::MyError;
 use crate::page::get_raw_page;
 use crate::page::is_page;
 use crate::repository::RepoBox;
-use crate::repository::Repository;
 use crate::repository::RepositoryItem;
 use crate::settings::Settings;
 
@@ -178,13 +177,12 @@ fn highlight(snippet: Snippet) -> String {
 impl Wiki {
     pub fn new(
         settings: Settings,
-        repository: Box<dyn Repository + Send + Sync>,
+        repository: RepoBox,
     ) -> Result<Self, MyError> {
-        let repo_box = RepoBox::new(repository);
-        let index = create_index(&settings, &repo_box)?;
+        let index = create_index(&settings, &repository)?;
         let inner = WikiInner {
             settings,
-            repository: repo_box,
+            repository,
             index,
         };
         Ok(Wiki(Arc::from(inner)))

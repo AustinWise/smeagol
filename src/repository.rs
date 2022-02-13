@@ -23,12 +23,6 @@ pub trait Repository: std::fmt::Debug {
 #[derive(Debug)]
 pub struct RepoBox(Box<dyn Repository + Sync + Send>);
 
-impl RepoBox {
-    pub fn new(repo: Box<dyn Repository + Sync + Send>) -> Self {
-        Self(repo)
-    }
-}
-
 impl Deref for RepoBox {
     type Target = dyn Repository + Sync + Send;
     fn deref(&self) -> &Self::Target {
@@ -121,11 +115,19 @@ impl Repository for FileSystemRepository {
     }
 }
 
-pub fn create_file_system_repository(dir_path: PathBuf) -> Result<impl Repository, MyError> {
-    let root_dir = dir_path.canonicalize()?;
-    if root_dir.is_dir() {
-        Ok(FileSystemRepository { root_dir })
+pub fn create_repository(use_fs: bool, dir_path: PathBuf) -> Result<RepoBox, MyError> {
+    let root_dir = match dir_path.canonicalize() {
+        Ok(dir) => dir,
+        Err(_) => {
+            return Err(MyError::GitRepoDoesNotExist { path: dir_path });
+        }
+    };
+    if !root_dir.is_dir() {
+        return Err(MyError::GitRepoDoesNotExist { path: root_dir });
+    }
+    if use_fs {
+        Ok(RepoBox(Box::new(FileSystemRepository { root_dir })))
     } else {
-        Err(MyError::GitRepoDoesNotExist { path: root_dir })
+        unimplemented!("need to add git");
     }
 }
