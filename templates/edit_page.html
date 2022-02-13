@@ -5,17 +5,25 @@
 {% block content %}
 
 <form method="post" action="{{post_url}}">
-    <div class="tabnav">
-        <nav class="tabnav-tabs edit_box_tabs" aria-label="Page editor">
-            <a class="tabnav-tab" href="#url" aria-current="page">Edit file</a>
-            <!-- <a class="tabnav-tab" href="#url">Preview</a> -->
-        </nav>
-        <div class="Box edit_box">
-            <textarea id="content" name="content" class="edit_text_area">{{content}}</textarea>
+    <fieldset>
+        <div class="tabnav">
+            <nav class="tabnav-tabs edit_box_tabs" aria-label="Page editor">
+                <a class="tabnav-tab" href="#url" aria-current="page">Edit file</a>
+                <!-- <a class="tabnav-tab" href="#url">Preview</a> -->
+            </nav>
         </div>
-    </div>
-    <button type="submit" class="btn btn-primary">Commit changes</button>
-    <a href="{{view_url}}" class="btn btn-danger">Cancel</a>
+        <div class="edit_box">
+            <textarea id="content" name="content" class="form-control edit_text_area">{{content}}</textarea>
+        </div>
+        <div>
+            <input type="text" name="message" class="form-control input-block" id="gollum-editor-message-field"
+                placeholder="{{message_placeholder}}">
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Commit changes</button>
+            <a href="{{view_url}}" class="btn btn-danger">Cancel</a>
+        </div>
+    </fieldset>
 </form>
 
 {% endblock %}

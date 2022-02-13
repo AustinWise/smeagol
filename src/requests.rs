@@ -61,18 +61,23 @@ impl<'r> WikiPagePath<'r> {
         }
     }
 
-    fn file_name_and_extension(&self) -> Option<(&str, &str)> {
+    fn file_name(&self) -> Option<&str> {
+        let (file_name, _) = self.segments.split_last()?;
+        Some(file_name)
+    }
+
+    fn file_stem_and_extension(&self) -> Option<(&str, &str)> {
         let (file_name, _) = self.segments.split_last()?;
         file_name.rsplit_once('.')
     }
 
-    fn file_name(&self) -> Option<&str> {
-        Some(self.file_name_and_extension()?.0)
+    fn file_stem(&self) -> Option<&str> {
+        Some(self.file_stem_and_extension()?.0)
     }
 
     #[cfg(test)]
     fn file_extension(&self) -> Option<&str> {
-        Some(self.file_name_and_extension()?.1)
+        Some(self.file_stem_and_extension()?.1)
     }
 
     fn breadcrumbs_helper<F: Fn(&'r [&'r str]) -> Origin>(
@@ -164,17 +169,23 @@ fn edit_save(
     Ok(response::Redirect::to(uri!(page(path))))
 }
 
+fn default_edit_message(path: &WikiPagePath) -> String {
+    format!("Update {}", path.file_name().expect("Ill-formed path"))
+}
+
 #[get("/edit/<path..>")]
 fn edit_view(path: WikiPagePath, w: Wiki) -> Result<response::content::Html<String>, MyError> {
     let content = w.read_file(&path.segments).unwrap_or_else(|_| vec![]);
     let content = std::str::from_utf8(&content)?;
     let post_url = uri!(edit_save(&path));
     let view_url = uri!(page(&path));
-    let file_stem = path.file_name().expect("Ill-formed path");
+    let title = format!("Editing {}", path.file_name().expect("Ill-formed path"));
+    let message_placeholder = default_edit_message(&path);
     let html = render_edit_page(
-        file_stem,
+        &title,
         &post_url.to_string(),
         &view_url.to_string(),
+        &message_placeholder,
         content,
         path.page_breadcrumbs(),
     )?;
@@ -194,7 +205,7 @@ fn page_response(
 fn page_inner(path: WikiPagePath, w: Wiki) -> Result<WikiPageResponder, MyError> {
     match w.read_file(&path.segments) {
         Ok(bytes) => {
-            let file_info = path.file_name_and_extension();
+            let file_info = path.file_stem_and_extension();
             Ok(match file_info {
                 Some((file_stem, file_ext)) => {
                     match crate::page::get_page(file_stem, file_ext, &bytes, w.settings())? {
@@ -220,7 +231,7 @@ fn page_inner(path: WikiPagePath, w: Wiki) -> Result<WikiPageResponder, MyError>
                     page(path)
                 ))))
             } else {
-                match path.file_name_and_extension() {
+                match path.file_stem_and_extension() {
                     Some((file_stem, "md")) => {
                         let create_url = uri!(edit_view(&path));
                         Ok(WikiPageResponder::PagePlaceholder(
@@ -340,7 +351,7 @@ mod tests {
         let parsed = WikiPagePath::from_slice(input);
         assert_eq!(
             Some(expected_file_stem),
-            parsed.file_name(),
+            parsed.file_stem(),
             "Unexpected file_stem while parsing request: {:?}",
             input
         );
@@ -374,11 +385,11 @@ mod tests {
     fn test_request_path_parse_unsupported() {
         let empty = WikiPagePath::new(vec![]);
         assert!(empty.directories().is_empty());
-        assert!(empty.file_name_and_extension().is_none());
+        assert!(empty.file_stem_and_extension().is_none());
 
         let extensionless_file = WikiPagePath::new(vec!["README"]);
         assert!(extensionless_file.directories().is_empty());
-        assert!(extensionless_file.file_name_and_extension().is_none());
+        assert!(extensionless_file.file_stem_and_extension().is_none());
     }
 
     #[test]
