@@ -2,8 +2,10 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum MyError {
-    #[error("Git repo does not exist.")]
-    GitRepoDoesNotExist,
+    #[error("This is not valid Wiki folder: {path}")]
+    GitRepoDoesNotExist {
+        path: std::path::PathBuf
+    },
     #[error("Path is not valid.")]
     InvalidPath,
     #[error("io error")]

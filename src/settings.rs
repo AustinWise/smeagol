@@ -95,10 +95,16 @@ pub fn parse_settings_from_args() -> Result<Settings, MyError> {
     } else {
         std::env::current_dir()?
     };
-    let git_repo = canonicalize(git_repo)?;
+
+    let git_repo = match canonicalize(&git_repo) {
+        Ok(r) => r,
+        Err(_) => {
+            return Err(MyError::GitRepoDoesNotExist { path: git_repo });
+        }
+    };
 
     if !git_repo.is_dir() {
-        return Err(MyError::GitRepoDoesNotExist);
+        return Err(MyError::GitRepoDoesNotExist { path: git_repo });
     }
 
     let config = load_config(&git_repo)?;

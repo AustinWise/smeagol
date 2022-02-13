@@ -126,6 +126,6 @@ pub fn create_file_system_repository(dir_path: PathBuf) -> Result<impl Repositor
     if root_dir.is_dir() {
         Ok(FileSystemRepository { root_dir })
     } else {
-        Err(MyError::GitRepoDoesNotExist)
+        Err(MyError::GitRepoDoesNotExist { path: root_dir })
     }
 }
