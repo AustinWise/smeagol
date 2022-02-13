@@ -74,7 +74,8 @@ impl<'r> WikiPagePath<'r> {
         file_name.rsplit_once('.')
     }
 
-    fn _file_stem(&self) -> Option<&str> {
+    #[cfg(test)]
+    fn file_stem(&self) -> Option<&str> {
         Some(self.file_stem_and_extension()?.0)
     }
 
