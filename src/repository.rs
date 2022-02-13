@@ -6,8 +6,7 @@ use std::{
 };
 
 use bitflags::bitflags;
-use git2::Index;
-use git2::{IndexEntry, IndexTime, ObjectType};
+use git2::ObjectType;
 
 use crate::error::MyError;
 
@@ -173,7 +172,7 @@ impl Repository for GitRepository {
         let repo = self.repo.lock().unwrap();
         let root = get_git_dir(&repo, file_paths)?;
 
-        let file_obj = match root.get_name(&filename) {
+        let file_obj = match root.get_name(filename) {
             Some(te) => te.to_object(&repo)?,
             None => {
                 return Err(MyError::InvalidPath);
@@ -193,7 +192,12 @@ impl Repository for GitRepository {
 
         let file_path = file_path.join("/");
 
+        // Get as many Git objects ready before writing the file.
         let repo = self.repo.lock().unwrap();
+        let mut index = repo.index()?;
+        let sig = repo.signature()?;
+        let head = repo.head()?;
+        let head_commit = head.peel_to_commit()?;
 
         let mut path = self.path.clone();
         path.push(&file_path);
@@ -206,9 +210,12 @@ impl Repository for GitRepository {
         // This would support bare Git repos.
         std::fs::write(&path, content)?;
 
-        let mut index = repo.index()?;
-        index.add_path(&Path::new(&file_path))?;
+        index.add_path(Path::new(&file_path))?;
         index.write()?;
+        let tree = index.write_tree()?;
+        let tree = repo.find_tree(tree)?;
+
+        repo.commit(head.name(), &sig, &sig, message, &tree, &[&head_commit])?;
 
         Ok(())
     }
