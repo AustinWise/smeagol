@@ -2,25 +2,67 @@
 <html data-color-mode="auto" data-light-theme="light" data-dark-theme="dark_dimmed">
 
 <head>
+    <meta name="MobileOptimized" content="width">
+    <meta name="HandheldFriendly" content="true">
+    <meta name="viewport" content="width=device-width">
     <link href="css/primer.css?v=19.1.1" rel="stylesheet" />
     <title>Smeagol - your personal wiki</title>
     <style>
+        body {
+            padding-left: 15px;
+            padding-right: 15px;
+            padding-bottom: 25px;
+        }
+
+        h1,
+        h2,
+        h3 {
+            margin-top: 0.5em;
+        }
+
+        img {
+            margin: 1em;
+        }
+
         .features {
             display: flex;
             flex-direction: row;
             text-align: center;
             justify-content: center;
+            flex-flow: row wrap;
         }
 
         .feature-box {
             padding: 1em;
             margin: 1em;
+            max-width: 250px;
+        }
+
+        .screenshot-box {
+            display: flex;
+            flex-direction: row;
+            text-align: center;
+            justify-content: center;
+            flex-shrink: inherit;
+            width: 100%;
+            /* border-width: 1em;
+            border-color: red;
+            border-width: 1em;
+            border-style: solid; */
+        }
+
+        .screenshot-box img {
+            max-width: 750px;
+            width: 100%;
+            /* object-fit: fill; */
         }
 
         .install-cta {
             text-align: center;
             display: flex;
             flex-direction: column;
+            margin-top: 1em;
+            margin-bottom: 1em;
         }
 
         .install-cta-command {
@@ -29,39 +71,132 @@
             margin: 1em;
             margin: auto;
         }
+
+        /* From: https://forkmeon.github.io/ */
+        .github-ribbon {
+            position: absolute;
+            top: 0px;
+            width: 150px;
+            height: 150px;
+            overflow: hidden;
+            z-index: 99999;
+            right: 0px;
+        }
+
+        .github-ribbon a {
+            display: inline-block;
+            width: 200px;
+            overflow: hidden;
+            padding: 6px 0px;
+            text-align: center;
+            transform: rotate(45deg);
+            text-decoration: none;
+            color: rgb(255, 255, 255);
+            position: inherit;
+            top: 45px;
+            font: 700 13px "Helvetica Neue", Helvetica, Arial, sans-serif;
+            box-shadow: rgba(0, 0, 0, 0.5) 0px 2px 3px 0px;
+            background-color: rgb(170, 0, 0);
+            right: -40px;
+        }
     </style>
 </head>
 
 <body class="container-lg">
-    <h1>Smeagol - your personal wiki</h1>
+    <p class="h1-mktg">Smeagol</p>
+    <p class="h2-mktg">your personal wiki</p>
+
+    <div class="features">
+        <div class="Box feature-box">
+            <h2>Based on open standards</h2>
+            <p>Your wiki content is just Markdown files in a Git repo.</p>
+        </div>
+        <div class="Box feature-box">
+            <h2>Runs locally</h2>
+            <p>After installing, no internet connection is required.</p>
+        </div>
+        <div class="Box feature-box">
+            <h2>Compatible with GitHub</h2>
+            <p>By following conventions like using <code>README.md</code> as the index document of a directory, you wiki
+                will also be browsable on GitHub and other code hosting services.</p>
+        </div>
+        <div class="Box feature-box">
+            <h2>Installs and runs quickly</h2>
+            <p>The native executable will run quickly and efficiently even on low-powered computers.</p>
+        </div>
+        <div class="Box feature-box">
+            <h2>Dark Mode</h2>
+            <p>Does not burn your eyeballs.</p>
+        </div>
+        <div class="Box feature-box">
+            <h2>Fast search</h2>
+            <p>Quickly find what your looking for. Even wikis with tens of thousands of files can be searched quickly.
+            </p>
+        </div>
+    </div>
+
+    <h2>Screenshot</h2>
+    <div class="screenshot-box border">
+        <img src="images/screenshot.png" />
+    </div>
+
+    <h2>Download now!</h2>
+    <div>
+        You can download the <a href="https://github.com/AustinWise/smeagol/releases/latest">latest release on
+            GitHub</a>.
+        Or use copy and paste one of the commands from below to automatically download and install the right executable
+        for your computer.
+    </div>
+    <h3>Install command for Unix-like operating systems</h3>
+    <div>
+        This will automatically place the executable in your <code>~/bin</code> or <code>~/.local/bin</code> directory:
+    </div>
+    <div class="install-cta">
+        <div class="install-cta-command color-bg-inset">
+            <code>curl --proto '=https' --tlsv1.2 -sSf https://smeagol.dev/install.sh | sh</code>
+        </div>
+    </div>
+    <h3>Install command for Windows (PowerShell)</h3>
+    <div>
+        Use this if you are using PowerShell in your command prompt. You can tell if you are using PowerShell if your
+        prompt starts with <code>PS</code>:
+    </div>
+    <img src="images/powershell.png" />
+    <div>
+        This will automatically place the executable in a folder in your <code>%USERPROFILE%</code> folder and add that
+        folder to your <code>%PATH%</code>:
+    </div>
+    <div class="install-cta">
+        <div class="install-cta-command color-bg-inset">
+            <code>iex "& { $(irm https://smeagol.dev/install.ps1 ) }"</code>
+        </div>
+    </div>
+    <h3>Install command for Windows (CMD.EXE)</h3>
+    <div>
+        Use this if you are using <code>cmd.exe</code> in your command prompt. You can tell if you are using
+        <code>cmd.exe</code> if your prompt starts with just the drive letter:
+    </div>
+    <img src="images/cmd.png" />
+    <div>
+        This will automatically place the executable in a folder in your <code>%USERPROFILE%</code> folder and add that
+        folder to your <code>%PATH%</code>:
+    </div>
+    <div class="install-cta">
+        <div class="install-cta-command color-bg-inset">
+            <code>powershell -ExecutionPolicy ByPass -NoProfile -Command "iex \" ^& { $(irm https://smeagol.dev/install.ps1 ) } \" "</code>
+        </div>
+    </div>
+
+
+    <h2>Learn More</h2>
+    <div>
+        See the <a href="https://github.com/AustinWise/smeagol#getting-started">README</a> for more information
+        information on how to use Smeagol.
+    </div>
+
+    <div class="github-ribbon">
+        <a target="_blank" href="https://github.com/AustinWise/smeagol">Fork me on GitHub</a>
+    </div>
 </body>
-
-<div class="features">
-    <div class="Box feature-box">
-        <h2>Feature 1</h2>
-        <p>More words</p>
-    </div>
-    <div class="Box feature-box">
-        <h2>Feature 2</h2>
-        <p>More words</p>
-    </div>
-    <div class="Box feature-box">
-        <h2>Feature 2</h2>
-        <p>More words</p>
-    </div>
-    <div class="Box feature-box">
-        <h2>Feature 4</h2>
-        <p>More words</p>
-    </div>
-</div>
-
-<h2>Download now!</h2>
-<div class="install-cta">
-
-    <div class="install-cta-command color-bg-inset">
-        <code>TODO: install command</code>
-    </div>
-
-</div>
 
 </html>
