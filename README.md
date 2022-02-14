@@ -19,6 +19,14 @@ to `gem install` on a low-powered Chromebook.
 
 ## Getting started
 
+See the [smeagol.dev website](https://smeagol.dev/) for more install options.
+
+If you use the Rust programming language, you can also install this tool using Cargo:
+
+```
+cargo install smeagol-wiki
+```
+
 Download the [latest release from GitHub](https://github.com/AustinWise/smeagol/releases/latest).
 Extract the `smeagol-wiki` executable from the compressed archive.
 `smeagol-wiki` is a command line application. It needs a directory
