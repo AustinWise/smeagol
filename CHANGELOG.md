@@ -1,6 +1,8 @@
 WIP
 ===
 
+* Support reading files from a Git repo [#34](https://github.com/AustinWise/smeagol/issues/34)
+* Support writing files to a Git repo [#35](https://github.com/AustinWise/smeagol/issues/35)
 * Rename the settings in `smeagol.toml` to use kebob-case, rather than
   snake_case. Specifically `h1_title` was renamed to `h1-title` and `index_page`
   was renamed to `index-page`. This matches `Cargo.toml`'s use of kebob-case.

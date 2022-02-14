@@ -99,12 +99,7 @@ impl MarkupLanguage {
         }
     }
 
-    fn raw<S: Into<String>>(
-        &self,
-        file_stem: &str,
-        file_contents: S,
-        settings: &Settings,
-    ) -> Page {
+    fn raw<S: Into<String>>(&self, file_stem: &str, file_contents: S, settings: &Settings) -> Page {
         let file_contents: String = file_contents.into();
         match self {
             MarkupLanguage::Markdown => {

@@ -1,16 +1,15 @@
 use std::default::Default;
-use std::fs::canonicalize;
 use std::net::{IpAddr, Ipv4Addr};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
-use clap::Parser;
 use serde::Deserialize;
 
 use crate::error::MyError;
+use crate::repository::{RepoBox, RepositoryItem};
 
 #[derive(clap::Parser, Debug, Clone)]
 #[clap(about, version, author)]
-struct Args {
+pub struct Args {
     /// Path to the directory containing the wiki Git repository.
     #[clap(parse(from_os_str))]
     git_repo: Option<PathBuf>,
@@ -20,6 +19,19 @@ struct Args {
     /// The TCP Port to bind to. Defaults to 8000
     #[clap(long)]
     port: Option<u16>,
+    /// Use the file system to read the wiki, not Git.
+    #[clap(long)]
+    fs: bool,
+}
+
+impl Args {
+    pub fn git_repo(&self) -> Option<PathBuf> {
+        self.git_repo.clone()
+    }
+
+    pub fn use_fs(&self) -> bool {
+        self.fs
+    }
 }
 
 #[derive(Default, Deserialize)]
@@ -34,7 +46,6 @@ struct Config {
 
 #[derive(Debug, Clone)]
 pub struct Settings {
-    git_repo: PathBuf,
     index_page: String,
     h1_title: bool,
     host: IpAddr,
@@ -45,16 +56,11 @@ impl Settings {
     #[cfg(test)]
     pub(crate) fn new(index_page: &str, h1_title: bool) -> Settings {
         Settings {
-            git_repo: PathBuf::new(),
             index_page: index_page.to_owned(),
             h1_title,
             host: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             port: 8000,
         }
-    }
-
-    pub fn git_repo(&self) -> &PathBuf {
-        &self.git_repo
     }
 
     pub fn index_page(&self) -> &str {
@@ -74,43 +80,33 @@ impl Settings {
     }
 }
 
-fn load_config(git_repo: &Path) -> Result<Config, MyError> {
-    let mut config_path = git_repo.to_path_buf();
-    config_path.push("smeagol.toml");
-    if config_path.is_file() {
-        match std::fs::read_to_string(config_path) {
-            Ok(config_str) => Ok(toml::from_str(&config_str)?),
-            Err(err) => Err(MyError::ConfigReadError { source: err }),
+fn load_config(repo: &RepoBox) -> Result<Config, MyError> {
+    const CONFIG_FILE_NAME: &str = "smeagol.toml";
+
+    if !repo.enumerate_files(&[])?.iter().any(|f| match f {
+        RepositoryItem::File(name) => name == CONFIG_FILE_NAME,
+        _ => false,
+    }) {
+        return Ok(Default::default());
+    };
+
+    let file_contents = match repo.read_file(&[CONFIG_FILE_NAME]) {
+        Ok(bytes) => bytes,
+        Err(err) => {
+            return Err(MyError::ConfigReadError {
+                source: Box::new(err),
+            })
         }
-    } else {
-        Ok(Default::default())
-    }
+    };
+    let config_str = std::str::from_utf8(&file_contents)?;
+
+    Ok(toml::from_str(config_str)?)
 }
 
-pub fn parse_settings_from_args() -> Result<Settings, MyError> {
-    let args = Args::parse();
-
-    let git_repo = if let Some(dir) = args.git_repo {
-        dir
-    } else {
-        std::env::current_dir()?
-    };
-
-    let git_repo = match canonicalize(&git_repo) {
-        Ok(r) => r,
-        Err(_) => {
-            return Err(MyError::GitRepoDoesNotExist { path: git_repo });
-        }
-    };
-
-    if !git_repo.is_dir() {
-        return Err(MyError::GitRepoDoesNotExist { path: git_repo });
-    }
-
-    let config = load_config(&git_repo)?;
+pub fn parse_settings_from_args(args: Args, repo: &RepoBox) -> Result<Settings, MyError> {
+    let config = load_config(repo)?;
 
     let ret = Settings {
-        git_repo,
         index_page: config.index_page.unwrap_or_else(|| "README".into()),
         h1_title: config.h1_title.unwrap_or(false),
         host: args

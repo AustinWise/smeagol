@@ -13,12 +13,11 @@ use crate::error::MyError;
 use crate::page::get_raw_page;
 use crate::page::is_page;
 use crate::repository::RepoBox;
-use crate::repository::Repository;
+use crate::repository::RepositoryCapability;
 use crate::repository::RepositoryItem;
 use crate::settings::Settings;
 
 /// Wiki god object.
-#[derive(Debug)]
 struct WikiInner {
     settings: Settings,
     repository: RepoBox,
@@ -26,8 +25,14 @@ struct WikiInner {
 }
 
 // TODO: is there are away to share immutable global without the reference counting? A 'static lifetime somehow?
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Wiki(Arc<WikiInner>);
+
+impl std::fmt::Debug for Wiki {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Wiki").finish()
+    }
+}
 
 struct SearchFields {
     title: Field,
@@ -176,15 +181,11 @@ fn highlight(snippet: Snippet) -> String {
 }
 
 impl Wiki {
-    pub fn new(
-        settings: Settings,
-        repository: Box<dyn Repository + Send + Sync>,
-    ) -> Result<Self, MyError> {
-        let repo_box = RepoBox::new(repository);
-        let index = create_index(&settings, &repo_box)?;
+    pub fn new(settings: Settings, repository: RepoBox) -> Result<Self, MyError> {
+        let index = create_index(&settings, &repository)?;
         let inner = WikiInner {
             settings,
-            repository: repo_box,
+            repository,
             index,
         };
         Ok(Wiki(Arc::from(inner)))
@@ -194,12 +195,21 @@ impl Wiki {
         &self.0.settings
     }
 
+    pub fn repo_capabilities(&self) -> RepositoryCapability {
+        self.0.repository.capabilities()
+    }
+
     pub fn read_file(&self, file_path: &[&str]) -> Result<Vec<u8>, MyError> {
         self.0.repository.read_file(file_path)
     }
 
-    pub fn write_file(&self, file_path: &[&str], content: &str) -> Result<(), MyError> {
-        self.0.repository.write_file(file_path, content)
+    pub fn write_file(
+        &self,
+        file_path: &[&str],
+        message: &str,
+        content: &str,
+    ) -> Result<(), MyError> {
+        self.0.repository.write_file(file_path, message, content)
     }
 
     pub fn directory_exists(&self, path: &[&str]) -> Result<bool, MyError> {

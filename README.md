@@ -44,6 +44,9 @@ There are a few command line options:
   access it.
 * `--port` - takes an argument that specifies which port to listen on. `8000` by
   default.
+* `--fs` - instructs Smeagol to load and save using the file system. By default
+  Smeagol uses Git to load files committed to a Git repository and saves them by
+  committing them to the current branch.
 
 Additionally, the following settings can be put in a `smeagol.toml` file in the
 root directory of the wiki:
@@ -63,6 +66,7 @@ root directory of the wiki:
 
 * `index-page` on Gollum defaults to `Home`. Smeagol defaults to `README` to be
   compatible with online code hosting systems such as GitHub and Azure Devops.
+* The default port is `8000` rather than `4567`.
 
 ## Why Rust, please tell me more about why you love Rust
 

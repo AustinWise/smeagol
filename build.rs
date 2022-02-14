@@ -97,7 +97,10 @@ impl EmbeddedFile {
 }
 
 fn rebuild_on_file_change(context: &mut ContextWriter, path: &Path) -> Result<(), io::Error> {
-    println!("cargo:rerun-if-changed={}", path.canonicalize()?.to_str().unwrap());
+    println!(
+        "cargo:rerun-if-changed={}",
+        path.canonicalize()?.to_str().unwrap()
+    );
     let mut file = File::open(path)?;
     io::copy(&mut file, context)?;
     Ok(())
@@ -145,7 +148,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("cargo:rustc-link-arg-bins=/MANIFEST:embed");
         println!("cargo:rustc-link-arg-bins=/MANIFESTINPUT:windows_manifest.xml");
     }
-
 
     Ok(())
 }

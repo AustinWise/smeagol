@@ -2,9 +2,16 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum MyError {
+    #[error("Bare Git repos are not yet supported.")]
+    BareGitRepo,
     #[error("This is not valid Wiki folder: {path}")]
-    GitRepoDoesNotExist {
-        path: std::path::PathBuf
+    GitRepoDoesNotExist { path: std::path::PathBuf },
+    #[error("Failed to open Git repo: {err}")]
+    GitRepoDoesFailedToOpen { err: git2::Error },
+    #[error("Error when performing git operation: {source}")]
+    GitError {
+        #[from]
+        source: git2::Error,
     },
     #[error("Path is not valid.")]
     InvalidPath,
@@ -19,7 +26,7 @@ pub enum MyError {
         source: askama::Error,
     },
     #[error("Failed to read config file.")]
-    ConfigReadError { source: std::io::Error },
+    ConfigReadError { source: Box<MyError> },
     #[error("Failed to parse config file.")]
     ConfigParseError {
         #[from]
