@@ -11,6 +11,17 @@
         body {
             padding-left: 15px;
             padding-right: 15px;
+            padding-bottom: 25px;
+        }
+
+        h1,
+        h2,
+        h3 {
+            margin-top: 0.5em;
+        }
+
+        img {
+            margin: 1em;
         }
 
         .features {
@@ -24,12 +35,34 @@
         .feature-box {
             padding: 1em;
             margin: 1em;
+            max-width: 250px;
+        }
+
+        .screenshot-box {
+            display: flex;
+            flex-direction: row;
+            text-align: center;
+            justify-content: center;
+            flex-shrink: inherit;
+            width: 100%;
+            /* border-width: 1em;
+            border-color: red;
+            border-width: 1em;
+            border-style: solid; */
+        }
+
+        .screenshot-box img {
+            max-width: 750px;
+            width: 100%;
+            /* object-fit: fill; */
         }
 
         .install-cta {
             text-align: center;
             display: flex;
             flex-direction: column;
+            margin-top: 1em;
+            margin-bottom: 1em;
         }
 
         .install-cta-command {
@@ -75,35 +108,95 @@
 
     <div class="features">
         <div class="Box feature-box">
-            <h2>Feature 1</h2>
-            <p>More words</p>
+            <h2>Based on open standards</h2>
+            <p>Your wiki content is just Markdown files in a Git repo.</p>
         </div>
         <div class="Box feature-box">
-            <h2>Feature 2</h2>
-            <p>More words</p>
+            <h2>Runs locally</h2>
+            <p>After installing, no internet connection is required.</p>
         </div>
         <div class="Box feature-box">
-            <h2>Feature 2</h2>
-            <p>More words</p>
+            <h2>Compatible with GitHub</h2>
+            <p>By following conventions like using <code>README.md</code> as the index document of a directory, you wiki
+                will also be browsable on GitHub and other code hosting services.</p>
         </div>
         <div class="Box feature-box">
-            <h2>Feature 4</h2>
-            <p>More words</p>
+            <h2>Installs and runs quickly</h2>
+            <p>The native executable will run quickly and efficiently even on low-powered computers.</p>
         </div>
+        <div class="Box feature-box">
+            <h2>Dark Mode</h2>
+            <p>Does not burn your eyeballs.</p>
+        </div>
+        <div class="Box feature-box">
+            <h2>Fast search</h2>
+            <p>Quickly find what your looking for. Even wikis with tens of thousands of files can be searched quickly.
+            </p>
+        </div>
+    </div>
+
+    <h2>Screenshot</h2>
+    <div class="screenshot-box border">
+        <img src="images/screenshot.png" />
     </div>
 
     <h2>Download now!</h2>
+    <div>
+        You can download the <a href="https://github.com/AustinWise/smeagol/releases/latest">latest release on
+            GitHub</a>.
+        Or use copy and paste one of the commands from below to automatically download and install the right executable
+        for your computer.
+    </div>
+    <h3>Install command for Unix-like operating systems</h3>
+    <div>
+        This will automatically place the executable in your <code>~/bin</code> or <code>~/.local/bin</code> directory:
+    </div>
     <div class="install-cta">
-
         <div class="install-cta-command color-bg-inset">
-            <code>TODO: install command</code>
+            <code>curl --proto '=https' --tlsv1.2 -sSf https://smeagol.dev/install.sh | sh</code>
         </div>
-
+    </div>
+    <h3>Install command for Windows (PowerShell)</h3>
+    <div>
+        Use this if you are using PowerShell in your command prompt. You can tell if you are using PowerShell if your
+        prompt starts with <code>PS</code>:
+    </div>
+    <img src="images/powershell.png" />
+    <div>
+        This will automatically place the executable in a folder in your <code>%USERPROFILE%</code> folder and add that
+        folder to your <code>%PATH%</code>:
+    </div>
+    <div class="install-cta">
+        <div class="install-cta-command color-bg-inset">
+            <code>iex "& { $(irm https://smeagol.dev/install.ps1 ) }"</code>
+        </div>
+    </div>
+    <h3>Install command for Windows (CMD.EXE)</h3>
+    <div>
+        Use this if you are using <code>cmd.exe</code> in your command prompt. You can tell if you are using
+        <code>cmd.exe</code> if your prompt starts with just the drive letter:
+    </div>
+    <img src="images/cmd.png" />
+    <div>
+        This will automatically place the executable in a folder in your <code>%USERPROFILE%</code> folder and add that
+        folder to your <code>%PATH%</code>:
+    </div>
+    <div class="install-cta">
+        <div class="install-cta-command color-bg-inset">
+            <code>powershell -ExecutionPolicy ByPass -NoProfile -Command "iex \" ^& { $(irm https://smeagol.dev/install.ps1 ) } \" "</code>
+        </div>
     </div>
 
-    <!-- <div class="github-ribbon">
+
+    <h2>Learn More</h2>
+    <div>
+        See the <a href="https://github.com/AustinWise/smeagol#getting-started">README</a> for more information
+        information on how to use Smeagol.
+    </div>
+
+    <div class="github-ribbon">
         <a target="_blank" href="https://github.com/AustinWise/smeagol">Fork me on GitHub</a>
-    </div> -->
+    </div>
 </body>
 
 </html>

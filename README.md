@@ -1,10 +1,9 @@
 
 # Smeagol - locally hosted wiki
 
-The aspiration goal of this project is to create a wiki software with these
-properties:
+The goal of this project is to create a wiki software with these properties:
 
-* Comparable in functionality to and compatible with GitHub wikis. This includes:
+* Compatible with GitHub. This means:
   * Git is the backing store
   * Markdown is used to format pages
 * Easy to run on your local computer.
