@@ -95,18 +95,7 @@ fn index_directory(
                         };
                         match get_raw_page(file_stem, file_ext, &bytes, settings) {
                             Ok(Some(page)) => {
-                                let mut url = String::new();
-                                for path in path {
-                                    url += "/";
-                                    url += path;
-                                }
-
-                                let mut doc = Document::default();
-                                doc.add_text(search_fields.path, url);
-                                doc.add_text(search_fields.title, page.title);
-                                doc.add_text(search_fields.body, page.body);
-
-                                index_writer.add_document(doc);
+                                index_file(&path, search_fields, page, index_writer);
                             }
                             Ok(None) => {
                                 unreachable!(
@@ -136,6 +125,27 @@ fn index_directory(
     Ok(())
 }
 
+fn index_file(
+    path: &[&str],
+    search_fields: &SearchFields,
+    page: crate::page::Page,
+    index_writer: &mut IndexWriter,
+) {
+    let mut url = String::new();
+    for path in path {
+        url += "/";
+        url += path;
+    }
+    let mut doc = Document::default();
+    doc.add_text(search_fields.path, &url);
+    doc.add_text(search_fields.title, page.title);
+    doc.add_text(search_fields.body, page.body);
+    index_writer.delete_term(Term::from_field_text(search_fields.path, &url));
+    index_writer.add_document(doc);
+}
+
+const INDEXING_HEAP_SIZE: usize = 50_000_000;
+
 fn create_index(settings: &Settings, repository: &RepoBox) -> Result<Index, MyError> {
     let mut schema_builder = Schema::builder();
     schema_builder.add_text_field("title", TEXT | STORED);
@@ -145,7 +155,7 @@ fn create_index(settings: &Settings, repository: &RepoBox) -> Result<Index, MyEr
     //TODO: store on disk?
     let index = Index::create_in_ram(schema.clone());
 
-    let mut index_writer = index.writer(50_000_000)?;
+    let mut index_writer = index.writer(INDEXING_HEAP_SIZE)?;
     let search_fields = SearchFields::from_schema(&schema);
 
     println!("Indexing files, this can take a while if there are a lot.");
@@ -209,7 +219,22 @@ impl Wiki {
         message: &str,
         content: &str,
     ) -> Result<(), MyError> {
-        self.0.repository.write_file(file_path, message, content)
+        if let Err(err) = self.0.repository.write_file(file_path, message, content) {
+            return Err(err);
+        }
+
+        if let Some((file_stem, file_ext)) = file_path.last().unwrap().rsplit_once('.') {
+            if is_page(file_ext) {
+                let mut writer = self.0.index.writer(INDEXING_HEAP_SIZE)?;
+                let search_fields = SearchFields::from_schema(&self.0.index.schema());
+                let page = get_raw_page(file_stem, file_ext, content.as_bytes(), &self.0.settings)?
+                    .unwrap();
+                index_file(file_path, &search_fields, page, &mut writer);
+                writer.commit()?;
+            }
+        }
+
+        Ok(())
     }
 
     pub fn directory_exists(&self, path: &[&str]) -> Result<bool, MyError> {

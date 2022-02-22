@@ -1,6 +1,8 @@
 WIP
 ===
 
+* Update search index on document change [#41](https://github.com/AustinWise/smeagol/issues/41)
+
 0.4.0 (2022-02-13)
 =====
 
