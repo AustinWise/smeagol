@@ -149,7 +149,7 @@ impl_from_uri_param_identity!([Path] ('r) WikiPagePath<'r>);
 // TODO: is the an easier way to convert an Error into a 500?
 impl<'r, 'o: 'r> Responder<'r, 'o> for MyError {
     fn respond_to(self, _request: &'r rocket::Request<'_>) -> rocket::response::Result<'o> {
-        let str = format!("server error: {:?}", self);
+        let str = format!("server error: {}", self);
         rocket::Response::build()
             .header(ContentType::Plain)
             .status(rocket::http::Status::InternalServerError)
@@ -158,10 +158,22 @@ impl<'r, 'o: 'r> Responder<'r, 'o> for MyError {
     }
 }
 
+//TODO: implement a "real" cross-site request forgery solution.
+// Ideally this would include some sort of expiration for the tokens.
+// Though this might be good enough, because I expect in typical use the wiki
+// server is shut down periodically, essentially expiring the tokens.
+lazy_static! {
+    static ref CSRF_TOKEN: String = {
+        let bytes = rand::random::<[u8; 32]>();
+        bytes.map(|b| format!("{:02x}", b)).concat()
+    };
+}
+
 #[derive(FromForm)]
 struct PageEditForm<'r> {
     content: &'r str,
     message: &'r str,
+    authenticity_token: &'r str,
 }
 
 fn edit_save_inner(
@@ -169,6 +181,9 @@ fn edit_save_inner(
     content: Form<PageEditForm<'_>>,
     w: Wiki,
 ) -> Result<response::Redirect, MyError> {
+    if &content.authenticity_token != &*CSRF_TOKEN {
+        return Err(MyError::CSRF);
+    }
     let message = if content.message.trim().is_empty() {
         let message = default_edit_message(&path);
         Cow::Owned(message)
@@ -216,6 +231,7 @@ fn edit_view_inner(
         message_placeholder,
         content,
         path.page_breadcrumbs(),
+        &CSRF_TOKEN,
     )?;
     Ok(response::content::Html(html))
 }

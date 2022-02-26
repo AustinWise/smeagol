@@ -47,4 +47,6 @@ pub enum MyError {
         #[from]
         source: tantivy::query::QueryParserError,
     },
+    #[error("Cross-site request forgery detected")]
+    CSRF,
 }

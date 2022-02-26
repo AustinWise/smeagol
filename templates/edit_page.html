@@ -5,6 +5,7 @@
 {% block content %}
 
 <form method="post" action="{{post_url}}">
+    <input type="hidden" name="authenticity_token" value="{{ authenticity_token }}">
     <fieldset>
         <div class="tabnav">
             <nav class="tabnav-tabs edit_box_tabs" aria-label="Page editor">
@@ -20,7 +21,7 @@
             {% when Some with (val) %}
             <input type="text" name="message" class="form-control input-block" placeholder="{{val}}">
             {% when None %}
-            <input type="hidden" name="message" placeholder="edit message not supported">
+            <input type="hidden" name="message" value="edit message not supported">
             {% endmatch %}
         </div>
         <div class="form-actions">

@@ -2,6 +2,7 @@ WIP
 ===
 
 * Update search index on document change [#41](https://github.com/AustinWise/smeagol/issues/41)
+* Basic cross-site request forgery protection [#43](https://github.com/AustinWise/smeagol/issues/43)
 
 0.4.0 (2022-02-13)
 =====

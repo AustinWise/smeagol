@@ -88,6 +88,7 @@ struct EditTemplate<'a> {
     message_placeholder: Option<String>,
     content: &'a str,
     breadcrumbs: Vec<Breadcrumb<'a>>,
+    authenticity_token: &'a str,
 }
 
 pub fn render_edit_page(
@@ -97,6 +98,7 @@ pub fn render_edit_page(
     message_placeholder: Option<String>,
     content: &str,
     breadcrumbs: Vec<Breadcrumb<'_>>,
+    authenticity_token: &str,
 ) -> askama::Result<String> {
     let primer_css_uri = &primer_css_uri();
     let favicon_png_uri = &favicon_png_uri();
@@ -109,6 +111,7 @@ pub fn render_edit_page(
         message_placeholder,
         content,
         breadcrumbs,
+        authenticity_token,
     };
     template.render()
 }
