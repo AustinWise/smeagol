@@ -1,4 +1,3 @@
-
 # Smeagol - locally hosted wiki
 
 The goal of this project is to create a wiki software with these properties:
