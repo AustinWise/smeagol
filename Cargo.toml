@@ -6,6 +6,7 @@ description = "A personal wiki webserver. Work in progress."
 license = "MIT"
 homepage = "https://github.com/AustinWise/smeagol/"
 repository = "https://github.com/AustinWise/smeagol/"
+exclude = ["/frontend", "/site"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
