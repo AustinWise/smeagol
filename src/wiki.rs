@@ -141,7 +141,7 @@ fn index_file(
     doc.add_text(search_fields.title, page.title);
     doc.add_text(search_fields.body, page.body);
     index_writer.delete_term(Term::from_field_text(search_fields.path, &url));
-    index_writer.add_document(doc);
+    index_writer.add_document(doc).unwrap();
 }
 
 const INDEXING_HEAP_SIZE: usize = 50_000_000;
@@ -177,16 +177,16 @@ fn highlight(snippet: Snippet) -> String {
     let mut start_from = 0;
 
     for fragment_range in snippet.highlighted() {
-        result.push_str(&snippet.fragments()[start_from..fragment_range.start]);
+        result.push_str(&snippet.fragment()[start_from..fragment_range.start]);
         result.push_str(
             "<span class=\"color-bg-accent-emphasis color-fg-on-emphasis p-1 rounded mb-4\">",
         );
-        result.push_str(&snippet.fragments()[fragment_range.clone()]);
+        result.push_str(&snippet.fragment()[fragment_range.clone()]);
         result.push_str("</span>");
         start_from = fragment_range.end;
     }
 
-    result.push_str(&snippet.fragments()[start_from..]);
+    result.push_str(&snippet.fragment()[start_from..]);
     result
 }
 
@@ -286,13 +286,13 @@ impl Wiki {
                 let title = doc
                     .get_first(fields.title)
                     .unwrap()
-                    .text()
+                    .as_text()
                     .unwrap()
                     .to_owned();
                 let path = doc
                     .get_first(fields.path)
                     .unwrap()
-                    .text()
+                    .as_text()
                     .unwrap()
                     .to_owned();
                 let snippet_html = highlight(snippet);
