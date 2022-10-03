@@ -59,5 +59,7 @@ async fn main() -> Result<(), rocket::Error> {
     let rocket = rocket::custom(figment);
     let rocket = requests::mount_routes(rocket);
     let rocket = assets::mount_routes(rocket);
-    rocket.ignite().await?.launch().await
+    let _rocket = rocket.ignite().await?.launch().await?;
+
+    Ok(())
 }

@@ -27,12 +27,12 @@ use crate::wiki::Wiki;
 #[allow(clippy::large_enum_variant)]
 #[derive(Responder)]
 enum WikiPageResponder {
-    Page(response::content::Html<String>),
+    Page((ContentType, String)),
     File(Vec<u8>),
-    TypedFile(response::content::Custom<Vec<u8>>),
+    TypedFile((ContentType, Vec<u8>)),
     Redirect(response::Redirect),
     NotFound(response::status::NotFound<String>),
-    PagePlaceholder(response::status::NotFound<response::content::Html<String>>),
+    PagePlaceholder(response::status::NotFound<(ContentType, String)>),
 }
 
 #[derive(Debug)]
@@ -207,10 +207,7 @@ fn default_edit_message(path: &WikiPagePath) -> String {
     format!("Update {}", path.file_name().expect("Ill-formed path"))
 }
 
-fn edit_view_inner(
-    path: WikiPagePath,
-    w: Wiki,
-) -> Result<response::content::Html<String>, MyError> {
+fn edit_view_inner(path: WikiPagePath, w: Wiki) -> Result<(ContentType, String), MyError> {
     let content = w.read_file(&path.segments).unwrap_or_else(|_| vec![]);
     let content = std::str::from_utf8(&content)?;
     let post_url = uri!(edit_save(&path));
@@ -233,22 +230,21 @@ fn edit_view_inner(
         path.page_breadcrumbs(),
         &CSRF_TOKEN,
     )?;
-    Ok(response::content::Html(html))
+    Ok((ContentType::HTML, html))
 }
 
 #[get("/edit/<path..>")]
-fn edit_view(path: WikiPagePath, w: Wiki) -> Result<response::content::Html<String>, MyError> {
+fn edit_view(path: WikiPagePath, w: Wiki) -> Result<(ContentType, String), MyError> {
     edit_view_inner(path, w)
 }
 
 fn page_response(
     page: crate::page::Page,
     path: &WikiPagePath,
-) -> Result<response::content::Html<String>, MyError> {
+) -> Result<(ContentType, String), MyError> {
     let edit_url = uri!(edit_view(path)).to_string();
     let html = render_page(&page.title, &edit_url, &page.body, path.page_breadcrumbs())?;
-    let content_typed = response::content::Html(html);
-    Ok(content_typed)
+    Ok((ContentType::HTML, html))
 }
 
 fn page_inner(path: WikiPagePath, w: Wiki) -> Result<WikiPageResponder, MyError> {
@@ -262,9 +258,7 @@ fn page_inner(path: WikiPagePath, w: Wiki) -> Result<WikiPageResponder, MyError>
                             WikiPageResponder::Page(page_response(page_model, &path)?)
                         }
                         None => match ContentType::from_extension(file_ext) {
-                            Some(mine_type) => WikiPageResponder::TypedFile(
-                                response::content::Custom(mine_type, bytes),
-                            ),
+                            Some(mine_type) => WikiPageResponder::TypedFile((mine_type, bytes)),
                             None => WikiPageResponder::File(bytes),
                         },
                     }
@@ -284,7 +278,8 @@ fn page_inner(path: WikiPagePath, w: Wiki) -> Result<WikiPageResponder, MyError>
                     Some((file_stem, "md")) => {
                         let create_url = uri!(edit_view(&path));
                         Ok(WikiPageResponder::PagePlaceholder(
-                            response::status::NotFound(response::content::Html(
+                            response::status::NotFound((
+                                ContentType::HTML,
                                 render_page_placeholder(
                                     file_stem,
                                     &path.to_string(),
@@ -309,7 +304,7 @@ fn page(path: WikiPagePath, w: Wiki) -> Result<WikiPageResponder, MyError> {
     page_inner(path, w)
 }
 
-fn overview_inner(path: WikiPagePath, w: Wiki) -> Result<response::content::Html<String>, MyError> {
+fn overview_inner(path: WikiPagePath, w: Wiki) -> Result<(ContentType, String), MyError> {
     let mut entries = w.enumerate_files(&path.segments)?;
     entries.sort();
     let entries = entries;
@@ -337,19 +332,15 @@ fn overview_inner(path: WikiPagePath, w: Wiki) -> Result<response::content::Html
         .collect();
 
     let html = render_overview("Overview", path.overview_breadcrumbs(), directories, files)?;
-    Ok(response::content::Html(html))
+    Ok((ContentType::HTML, html))
 }
 
 #[get("/overview/<path..>")]
-fn overview(path: WikiPagePath, w: Wiki) -> Result<response::content::Html<String>, MyError> {
+fn overview(path: WikiPagePath, w: Wiki) -> Result<(ContentType, String), MyError> {
     overview_inner(path, w)
 }
 
-fn search_inner(
-    q: &str,
-    offset: Option<usize>,
-    w: Wiki,
-) -> Result<response::content::Html<String>, MyError> {
+fn search_inner(q: &str, offset: Option<usize>, w: Wiki) -> Result<(ContentType, String), MyError> {
     const RESULTS_PER_PAGE: usize = 10;
     let results = w.search(q, RESULTS_PER_PAGE, offset)?;
     let prev_url = offset.and_then(|v| {
@@ -361,15 +352,11 @@ fn search_inner(
     });
     let next_url = Some(uri!(search(q, Some(offset.unwrap_or(0) + RESULTS_PER_PAGE))).to_string());
     let html = render_search_results(q, results, prev_url, next_url)?;
-    Ok(response::content::Html(html))
+    Ok((ContentType::HTML, html))
 }
 
 #[get("/search?<q>&<offset>")]
-fn search(
-    q: &str,
-    offset: Option<usize>,
-    w: Wiki,
-) -> Result<response::content::Html<String>, MyError> {
+fn search(q: &str, offset: Option<usize>, w: Wiki) -> Result<(ContentType, String), MyError> {
     search_inner(q, offset, w)
 }
 
