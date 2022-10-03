@@ -47,7 +47,7 @@ impl<'r> WikiPagePath<'r> {
 
     fn from_slice(segments: &[&'r str]) -> Self {
         WikiPagePath {
-            segments: segments.iter().copied().collect(),
+            segments: segments.to_vec(),
         }
     }
 
@@ -181,8 +181,8 @@ fn edit_save_inner(
     content: Form<PageEditForm<'_>>,
     w: Wiki,
 ) -> Result<response::Redirect, MyError> {
-    if &content.authenticity_token != &*CSRF_TOKEN {
-        return Err(MyError::CSRF);
+    if content.authenticity_token != *CSRF_TOKEN {
+        return Err(MyError::Csrf);
     }
     let message = if content.message.trim().is_empty() {
         let message = default_edit_message(&path);

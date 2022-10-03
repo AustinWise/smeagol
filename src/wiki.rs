@@ -219,9 +219,7 @@ impl Wiki {
         message: &str,
         content: &str,
     ) -> Result<(), MyError> {
-        if let Err(err) = self.0.repository.write_file(file_path, message, content) {
-            return Err(err);
-        }
+        self.0.repository.write_file(file_path, message, content)?;
 
         if let Some((file_stem, file_ext)) = file_path.last().unwrap().rsplit_once('.') {
             if is_page(file_ext) {
