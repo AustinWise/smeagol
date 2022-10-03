@@ -360,6 +360,18 @@ fn search(q: &str, offset: Option<usize>, w: Wiki) -> Result<(ContentType, Strin
     search_inner(q, offset, w)
 }
 
+fn preview_inner(file_stem: &str, file_extension: &str, content: &str, w: Wiki) -> Result<(ContentType, String), MyError> {
+    let page = crate::page::get_page(file_stem, file_extension, content.as_bytes(), w.settings())?;
+    let page = page.unwrap();
+    Ok((ContentType::HTML, page.body))
+}
+
+// TODO: add CSRF token
+#[post("/preview?<file_stem>&<file_extension>", data = "<content>")]
+fn preview(file_stem: &str, file_extension: &str, content: &str, w: Wiki) -> Result<(ContentType, String), MyError> {
+    preview_inner(file_stem, file_extension, content, w)
+}
+
 #[get("/")]
 fn index(w: Wiki) -> response::Redirect {
     let file_name = format!("{}.md", w.settings().index_page());
@@ -370,7 +382,7 @@ fn index(w: Wiki) -> response::Redirect {
 pub fn mount_routes(rocket: Rocket<Build>) -> Rocket<Build> {
     rocket.mount(
         "/",
-        routes![page, search, edit_save, edit_view, overview, index],
+        routes![page, search, edit_save, edit_view, preview, overview, index],
     )
 }
 
