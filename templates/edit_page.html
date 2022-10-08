@@ -9,12 +9,15 @@
     <fieldset>
         <div class="tabnav">
             <nav class="tabnav-tabs edit_box_tabs" aria-label="Page editor">
-                <a class="tabnav-tab" href="#url" aria-current="page">Edit file</a>
-                <!-- <a class="tabnav-tab" href="#url">Preview</a> -->
+                <a class="tabnav-tab selected" id="edit" aria-current="page">Edit file</a>
+                <a class="tabnav-tab" id="preview">Preview</a>
             </nav>
         </div>
-        <div class="edit_box">
+        <div class="edit_box tabnav-div" id="edit-content">
             <textarea id="content" name="content" class="form-control edit_text_area">{{content}}</textarea>
+        </div>
+        <div class="preview_box tabnav-div" id="preview-content" style="display: none;">
+            <div class="preview_rendered" id="preview_rendered"></div>
         </div>
         <div>
             {% match message_placeholder %}
@@ -30,5 +33,70 @@
         </div>
     </fieldset>
 </form>
+
+<script>
+    /**
+     * @param {HTMLElement} element
+     */
+    async function switchToTab(element) {
+        if (element.classList.contains("selected"))
+        {
+            // Already selected.
+            return;
+        }
+
+        let content = document.getElementById("content");
+        let preview = document.getElementById("preview_rendered");
+
+        let buttons = [document.getElementById("edit"), document.getElementById("preview")];
+        let contents = [document.getElementById("edit-content"), document.getElementById("preview-content")];
+
+        for (let i = 0; i < buttons.length; i++)
+        {
+            if (buttons[i] == element)
+            {
+                buttons[i].classList.add("selected");
+                buttons[i].setAttribute("aria-current", "page");
+                contents[i].style.display = "flex";
+            }
+            else
+            {
+                buttons[i].classList.remove("selected");
+                buttons[i].removeAttribute("aria-current");
+                contents[i].style.display = "none";
+            }
+        }
+
+        if (element.id == "preview")
+        {
+            // TODO: specify the extension based on the current file
+            try
+            {
+                let res = await fetch("{{preview_url}}", {method: "POST", cache: 'no-cache', body: content.value});
+                if (res.status == 200)
+                {
+                    preview.innerHTML = await res.text();
+                }
+                else
+                {
+                    preview.innerHTML = "<pre>failed to load preview: " + res.statusText + "</pre>";
+                }
+            }
+            catch (ex)
+            {
+                preview.innerHTML = "<pre>failed to load preview: " + ex + "</pre>";
+            }
+        }
+    }
+
+    window.addEventListener('DOMContentLoaded', (event) => {
+        document.getElementById("edit").addEventListener("click", (ev) => {
+            switchToTab(ev.target);
+        });
+        document.getElementById("preview").addEventListener("click", (ev) => {
+            switchToTab(ev.target);
+        });
+    });
+</script>
 
 {% endblock %}

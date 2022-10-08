@@ -212,6 +212,7 @@ fn edit_view_inner(path: WikiPagePath, w: Wiki) -> Result<(ContentType, String),
     let content = std::str::from_utf8(&content)?;
     let post_url = uri!(edit_save(&path));
     let view_url = uri!(page(&path));
+    let preview_url = uri!(preview(&path));
     let title = format!("Editing {}", path.file_name().expect("Ill-formed path"));
     let message_placeholder = if w
         .repo_capabilities()
@@ -225,6 +226,7 @@ fn edit_view_inner(path: WikiPagePath, w: Wiki) -> Result<(ContentType, String),
         &title,
         &post_url.to_string(),
         &view_url.to_string(),
+        &preview_url.to_string(),
         message_placeholder,
         content,
         path.page_breadcrumbs(),
@@ -360,6 +362,23 @@ fn search(q: &str, offset: Option<usize>, w: Wiki) -> Result<(ContentType, Strin
     search_inner(q, offset, w)
 }
 
+fn preview_inner(
+    path: WikiPagePath,
+    content: &str,
+    w: Wiki,
+) -> Result<(ContentType, String), MyError> {
+    let (file_stem, file_extension) = path.file_stem_and_extension().unwrap();
+    let page = crate::page::get_page(file_stem, file_extension, content.as_bytes(), w.settings())?;
+    let page = page.unwrap();
+    Ok((ContentType::HTML, page.body))
+}
+
+// TODO: add CSRF token
+#[post("/preview/<path..>", data = "<content>")]
+fn preview(path: WikiPagePath, content: &str, w: Wiki) -> Result<(ContentType, String), MyError> {
+    preview_inner(path, content, w)
+}
+
 #[get("/")]
 fn index(w: Wiki) -> response::Redirect {
     let file_name = format!("{}.md", w.settings().index_page());
@@ -370,7 +389,7 @@ fn index(w: Wiki) -> response::Redirect {
 pub fn mount_routes(rocket: Rocket<Build>) -> Rocket<Build> {
     rocket.mount(
         "/",
-        routes![page, search, edit_save, edit_view, overview, index],
+        routes![page, search, edit_save, edit_view, preview, overview, index],
     )
 }
 
