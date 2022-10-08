@@ -92,6 +92,7 @@ struct EditTemplate<'a> {
     authenticity_token: &'a str,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn render_edit_page(
     title: &str,
     post_url: &str,
