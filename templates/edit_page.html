@@ -72,7 +72,7 @@
             // TODO: specify the extension based on the current file
             try
             {
-                let res = await fetch("/preview?file_stem=preview&file_extension=md", {method: "POST", cache: 'no-cache', body: content.value});
+                let res = await fetch("{{preview_url}}", {method: "POST", cache: 'no-cache', body: content.value});
                 if (res.status == 200)
                 {
                     preview.innerHTML = await res.text();
