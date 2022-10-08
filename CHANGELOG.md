@@ -1,5 +1,8 @@
-WIP
+0.4.2 (2022-10-07)
 =====
+
+* When editing a page, add the ability to preview your how your changes will
+  look before saving [#51](https://github.com/AustinWise/smeagol/issues/51)
 
 0.4.1 (2022-04-16)
 =====
