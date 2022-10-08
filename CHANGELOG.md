@@ -1,8 +1,15 @@
+0.4.3 (2022-10-08)
+=====
+
+* Fix lack of ready message when in release builds.
+  [#53](https://github.com/AustinWise/smeagol/issues/53)
+
 0.4.2 (2022-10-07)
 =====
 
 * When editing a page, add the ability to preview your how your changes will
   look before saving [#51](https://github.com/AustinWise/smeagol/issues/51)
+* Update dependencies, including Rocket web framework to 0.5.0-rc.2 .
 
 0.4.1 (2022-04-16)
 =====

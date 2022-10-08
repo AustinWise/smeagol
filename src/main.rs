@@ -29,6 +29,9 @@ fn create_wiki() -> Result<Wiki, MyError> {
     let git_repo = args
         .git_repo()
         .unwrap_or_else(|| std::env::current_dir().unwrap());
+
+    println!("Loading wiki in {}", git_repo.display());
+
     let repo = create_repository(args.use_fs(), git_repo)?;
     let settings = parse_settings_from_args(args, &repo)?;
     Wiki::new(settings, repo)
@@ -53,13 +56,27 @@ async fn main() -> Result<(), rocket::Error> {
         }
     };
     WIKI.set(wiki).expect("Failed to set global wiki pointer.");
+
+    println!("Wiki loaded");
+
+    let address = WIKI.get().unwrap().settings().host();
+    let port = WIKI.get().unwrap().settings().port();
+
     let figment = rocket::Config::figment()
-        .merge(("port", WIKI.get().unwrap().settings().port()))
-        .merge(("address", WIKI.get().unwrap().settings().host()));
+        .merge(("port", port))
+        .merge(("address", address));
     let rocket = rocket::custom(figment);
     let rocket = requests::mount_routes(rocket);
     let rocket = assets::mount_routes(rocket);
-    let _rocket = rocket.ignite().await?.launch().await?;
+    let rocket = rocket.ignite().await?;
+
+    println!("Smeagol is listening on http://{address}:{port}/");
+
+    let rocket = rocket.launch().await?;
+
+    println!("Shutting down");
+
+    drop(rocket);
 
     Ok(())
 }
