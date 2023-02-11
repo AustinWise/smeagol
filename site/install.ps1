@@ -32,6 +32,9 @@ if (-not (Test-Path $bin_dir)) {
     New-Item -Path $bin_dir -Force -ItemType 'Directory' | Out-Null
 }
 
+# See this document for why the process of determining the native OS arcitecture
+# is so convulated:
+# https://github.com/AustinWise/smeagol/blob/master/PowershellNotes.md
 $file_extractor_source = @"
 using Microsoft.Win32.SafeHandles;
 using System;
@@ -158,6 +161,9 @@ namespace TEMP_NAMESPACE_REPLACE_ME
 }
 "@
 
+# We use a random namespace every time, so that this script can be repeated
+# run within a PowerShell process. If we used the same name every time, we
+# get name colision errors.
 $file_extractor_namespace = "NS_" + [System.Guid]::NewGuid().ToString("N")
 $file_extractor_source = $file_extractor_source.Replace("TEMP_NAMESPACE_REPLACE_ME", $file_extractor_namespace)
 Add-Type -TypeDefinition $file_extractor_source -ReferencedAssemblies @("System.IO.Compression", "System.IO.Compression.FileSystem", "System.Diagnostics.Process", "System.Linq", "System.ComponentModel.Primitives", "Microsoft.Win32.Primitives", "System.IO.Compression.ZipFile", "System.Collections")
