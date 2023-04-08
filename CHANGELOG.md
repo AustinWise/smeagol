@@ -1,5 +1,10 @@
-WIP
+0.4.4 (2023-04-07)
 =====
+
+* When navigating to a directory with no index file, instead show the overview page. This has a list
+  of files and folders.
+* The Overview button will show the files in the directory that contains the files you are
+  currently viewing. Previously it would always show the root folder.
 
 0.4.3 (2022-10-08)
 =====
