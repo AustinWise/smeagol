@@ -22,6 +22,7 @@ struct ViewPageTemplate<'a> {
     favicon_png_uri: &'a str,
     title: &'a str,
     edit_url: &'a str,
+    overview_url: &'a str,
     content: &'a str,
     breadcrumbs: Vec<Breadcrumb<'a>>,
 }
@@ -29,6 +30,7 @@ struct ViewPageTemplate<'a> {
 pub fn render_page(
     title: &str,
     edit_url: &str,
+    overview_url: &str,
     content: &str,
     breadcrumbs: Vec<Breadcrumb<'_>>,
 ) -> askama::Result<String> {
@@ -39,6 +41,7 @@ pub fn render_page(
         favicon_png_uri,
         title,
         edit_url,
+        overview_url,
         content,
         breadcrumbs,
     };
@@ -54,6 +57,7 @@ struct PagePlaceholderTemplate<'a> {
     title: &'a str,
     file_path: &'a str,
     create_url: &'a str,
+    overview_url: &'a str,
     breadcrumbs: Vec<Breadcrumb<'a>>,
 }
 
@@ -61,6 +65,7 @@ pub fn render_page_placeholder(
     title: &str,
     file_path: &str,
     create_url: &str,
+    overview_url: &str,
     breadcrumbs: Vec<Breadcrumb<'_>>,
 ) -> askama::Result<String> {
     let primer_css_uri = &primer_css_uri();
@@ -71,6 +76,7 @@ pub fn render_page_placeholder(
         title,
         file_path,
         create_url,
+        overview_url,
         breadcrumbs,
     };
     template.render()
@@ -86,6 +92,7 @@ struct EditTemplate<'a> {
     post_url: &'a str,
     view_url: &'a str,
     preview_url: &'a str,
+    overview_url: &'a str,
     message_placeholder: Option<String>,
     content: &'a str,
     breadcrumbs: Vec<Breadcrumb<'a>>,
@@ -112,6 +119,7 @@ pub fn render_edit_page(
         post_url,
         view_url,
         preview_url,
+        overview_url: "/overview",
         message_placeholder,
         content,
         breadcrumbs,
@@ -142,6 +150,7 @@ struct OverviewTemplate<'a> {
     breadcrumbs: Vec<Breadcrumb<'a>>,
     directories: Vec<DirectoryEntry<'a>>,
     files: Vec<DirectoryEntry<'a>>,
+    overview_url: &'a str,
 }
 
 pub fn render_overview(
@@ -163,6 +172,7 @@ pub fn render_overview(
         breadcrumbs,
         directories,
         files,
+        overview_url: "/overview",
     };
     template.render()
 }
@@ -178,6 +188,7 @@ struct SearchResultsTemplate<'a> {
     breadcrumbs: Vec<Breadcrumb<'a>>,
     prev_url: Option<String>,
     next_url: Option<String>,
+    overview_url: &'a str,
 }
 
 pub fn render_search_results(
@@ -198,6 +209,7 @@ pub fn render_search_results(
         documents,
         prev_url,
         next_url,
+        overview_url: "/overview",
     };
     template.render()
 }

@@ -64,6 +64,13 @@ impl<'r> WikiPagePath<'r> {
         }
     }
 
+    fn directory(&self) -> Option<Self> {
+        let (_, dirs) = self.segments.split_last()?;
+        Some(WikiPagePath {
+            segments: dirs.to_owned(),
+        })
+    }
+
     fn file_name(&self) -> Option<&str> {
         let (file_name, _) = self.segments.split_last()?;
         Some(file_name)
@@ -245,7 +252,14 @@ fn page_response(
     path: &WikiPagePath,
 ) -> Result<(ContentType, String), MyError> {
     let edit_url = uri!(edit_view(path)).to_string();
-    let html = render_page(&page.title, &edit_url, &page.body, path.page_breadcrumbs())?;
+    let overview_url = uri!(overview(path.directory().unwrap())).to_string();
+    let html = render_page(
+        &page.title,
+        &edit_url,
+        &overview_url,
+        &page.body,
+        path.page_breadcrumbs(),
+    )?;
     Ok((ContentType::HTML, html))
 }
 
@@ -285,6 +299,7 @@ fn page_inner(path: WikiPagePath, w: Wiki) -> Result<WikiPageResponder, MyError>
                 match path.file_stem_and_extension() {
                     Some((file_stem, "md")) => {
                         let create_url = uri!(edit_view(&path));
+                        let overview_url = uri!(overview(path.directory().unwrap())).to_string();
                         Ok(WikiPageResponder::PagePlaceholder(
                             response::status::NotFound((
                                 ContentType::HTML,
@@ -292,6 +307,7 @@ fn page_inner(path: WikiPagePath, w: Wiki) -> Result<WikiPageResponder, MyError>
                                     file_stem,
                                     &path.to_string(),
                                     &create_url.to_string(),
+                                    &overview_url,
                                     path.page_breadcrumbs(),
                                 )
                                 .unwrap(),
