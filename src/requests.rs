@@ -271,10 +271,16 @@ fn page_inner(path: WikiPagePath, w: Wiki) -> Result<WikiPageResponder, MyError>
         Err(_) => {
             if w.directory_exists(&path.segments).unwrap() {
                 let file_name = format!("{}.md", w.settings().index_page());
-                let path = path.append_segment(&file_name);
-                Ok(WikiPageResponder::Redirect(response::Redirect::to(uri!(
-                    page(path)
-                ))))
+                let file_path = path.append_segment(&file_name);
+                if w.file_exists(&file_path.segments)? {
+                    Ok(WikiPageResponder::Redirect(response::Redirect::to(uri!(
+                        page(file_path)
+                    ))))
+                } else {
+                    Ok(WikiPageResponder::Redirect(response::Redirect::to(uri!(
+                        overview(path)
+                    ))))
+                }
             } else {
                 match path.file_stem_and_extension() {
                     Some((file_stem, "md")) => {

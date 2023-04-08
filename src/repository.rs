@@ -28,6 +28,7 @@ pub trait Repository {
     fn read_file(&self, file_path: &[&str]) -> Result<Vec<u8>, MyError>;
     fn write_file(&self, file_path: &[&str], message: &str, content: &str) -> Result<(), MyError>;
     fn directory_exists(&self, path: &[&str]) -> Result<bool, MyError>;
+    fn file_exists(&self, path: &[&str]) -> Result<bool, MyError>;
     fn enumerate_files(&self, directory: &[&str]) -> Result<Vec<RepositoryItem>, MyError>;
 }
 
@@ -97,6 +98,14 @@ impl Repository for FileSystemRepository {
     fn directory_exists(&self, path: &[&str]) -> Result<bool, MyError> {
         match self.canonicalize_path(path) {
             Ok(path) => Ok(path.is_dir()),
+            Err(_) => Ok(false),
+        }
+    }
+
+    // TODO: consider if this should return error for anything
+    fn file_exists(&self, path: &[&str]) -> Result<bool, MyError> {
+        match self.canonicalize_path(path) {
+            Ok(path) => Ok(path.is_file()),
             Err(_) => Ok(false),
         }
     }
@@ -224,6 +233,30 @@ impl Repository for GitRepository {
         let repo = self.repo.lock().unwrap();
         let ret = get_git_dir(&repo, path).is_ok();
         Ok(ret)
+    }
+
+    fn file_exists(&self, path: &[&str]) -> Result<bool, MyError> {
+        let (filename, file_paths) = match path.split_last() {
+            Some(tup) => tup,
+            None => {
+                return Err(MyError::InvalidPath);
+            }
+        };
+
+        let repo = self.repo.lock().unwrap();
+        let root = match get_git_dir(&repo, file_paths) {
+            Ok(tree) => tree,
+            Err(_) => return Ok(false),
+        };
+
+        let file_obj = match root.get_name(filename) {
+            Some(te) => te.to_object(&repo)?,
+            None => {
+                return Ok(false);
+            }
+        };
+
+        Ok(file_obj.as_blob().is_some())
     }
 
     fn enumerate_files(&self, directory: &[&str]) -> Result<Vec<RepositoryItem>, MyError> {

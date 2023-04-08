@@ -239,6 +239,10 @@ impl Wiki {
         self.0.repository.directory_exists(path)
     }
 
+    pub fn file_exists(&self, path: &[&str]) -> Result<bool, MyError> {
+        self.0.repository.file_exists(path)
+    }
+
     pub fn enumerate_files(&self, directory: &[&str]) -> Result<Vec<RepositoryItem>, MyError> {
         self.0.repository.enumerate_files(directory)
     }
