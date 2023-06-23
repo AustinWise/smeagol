@@ -17,20 +17,20 @@ strip = "symbols"
 ring = "0.16.20"
 
 [dependencies]
-askama = "0.11"
+askama = "0.12"
 bitflags = "1.3.2"
 clap = { version = "3.0.0", features = ["derive"] }
-git2 = { version = "0.16", default-features = false }
+git2 = { version = "0.17", default-features = false }
 lazy_static = "1.4.0"
 log = "0.4"
-once_cell = "1.9.0"
-pretty_env_logger = "0.4"
+once_cell = "1.18.0"
+pretty_env_logger = "0.5"
 pulldown-cmark = { version = "0.9", default-features = false }
 rand = "0.8.5"
 rocket = "0.5.0-rc.3"
 serde = { version = "1.0", features = ["derive"] }
-strum = "0.23"
-strum_macros = "0.23"
-tantivy = "0.18"
+strum = "0.25"
+strum_macros = "0.25"
+tantivy = "0.20"
 thiserror = "1.0"
-toml = "0.5.8"
+toml = "0.7"
