@@ -13,7 +13,7 @@ mod settings;
 mod templates;
 mod wiki;
 
-use clap::StructOpt;
+use clap::Parser;
 use error::MyError;
 use repository::create_repository;
 use settings::parse_settings_from_args;

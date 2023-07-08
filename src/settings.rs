@@ -8,19 +8,18 @@ use crate::error::MyError;
 use crate::repository::{RepoBox, RepositoryItem};
 
 #[derive(clap::Parser, Debug, Clone)]
-#[clap(about, version, author)]
+#[command(author, version, about, long_about = None)]
 pub struct Args {
     /// Path to the directory containing the wiki Git repository.
-    #[clap(parse(from_os_str))]
     git_repo: Option<PathBuf>,
     /// The IP address to bind to. Defaults to 127.0.0.1
-    #[clap(long)]
+    #[arg(long)]
     host: Option<IpAddr>,
     /// The TCP Port to bind to. Defaults to 8000
-    #[clap(long)]
+    #[arg(long)]
     port: Option<u16>,
     /// Use the file system to read the wiki, not Git.
-    #[clap(long)]
+    #[arg(long)]
     fs: bool,
 }
 
