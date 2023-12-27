@@ -24,7 +24,7 @@ jobs:
       id: ${{ steps.release.outputs.id }}
       upload_url: ${{ steps.release.outputs.upload_url }}
     env:
-      RELEASE_BODY_FILE_NAME: __release_body_file_dont_commit__.txt
+      RELEASE_BODY_FILE_NAME: __release_body_file_dont_commit__.md
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
