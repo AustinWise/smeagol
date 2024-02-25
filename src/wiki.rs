@@ -1,4 +1,9 @@
+use std::str;
 use std::sync::Arc;
+
+use lazy_static::lazy_static;
+
+use regex::bytes::{Captures, Regex};
 
 use tantivy::collector::TopDocs;
 use tantivy::query::QueryParser;
@@ -210,7 +215,23 @@ impl Wiki {
     }
 
     pub fn read_file(&self, file_path: &[&str]) -> Result<Vec<u8>, MyError> {
-        self.0.repository.read_file(file_path)
+        lazy_static! {
+            static ref RE: Regex = Regex::new(r"\[\[(.*?)\]\]").unwrap();
+        }
+        let mut res = self.0.repository.read_file(file_path);
+        if let Ok(mut bytes) = res {
+            while RE.is_match(&bytes) {
+                bytes = RE.replace(&bytes, |caps: &Captures| {
+                    if let Ok(filename) = str::from_utf8(&caps[1]) {
+                        self.0.repository.read_file(&[filename]).unwrap_or(b"**read error**".to_vec())
+                    } else {
+                        b"**conversion error**".to_vec()
+                    }
+                }).to_vec();
+            }
+            res = Ok(bytes)
+        }
+        res
     }
 
     pub fn write_file(
