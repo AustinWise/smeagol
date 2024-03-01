@@ -27,7 +27,7 @@ jobs:
       RELEASE_BODY_FILE_NAME: __release_body_file_dont_commit__.md
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Create release body file
         shell: bash
         run: |
@@ -113,7 +113,7 @@ jobs:
           echo "RUSTFLAGS=-C target-feature=+crt-static" >> $GITHUB_ENV
 
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1
