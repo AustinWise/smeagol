@@ -1,5 +1,7 @@
 # Smeagol - locally hosted wiki
 
+{{CHANGELOG.md}}
+
 The goal of this project is to create a wiki software with these properties:
 
 * Compatible with GitHub. This means:
