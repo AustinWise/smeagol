@@ -1,6 +1,6 @@
 # Smeagol - locally hosted wiki
 
-[[CHANGELOG.md]]
+[[CHANGELOG.md]](a.md)
 
 The goal of this project is to create a wiki software with these properties:
 
