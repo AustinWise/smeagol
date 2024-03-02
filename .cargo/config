@@ -4,3 +4,8 @@
 #rustflags = ["-C", "link-arg=-fuse-ld=lld"]
 #[target.aarch64-unknown-linux-gnu]
 #rustflags = ["-C", "link-arg=-fuse-ld=lld"]
+
+# We only link to DLLs in System32, so limit the OS loader to looking in there.
+# https://learn.microsoft.com/cpp/build/reference/dependentloadflag
+[target.'cfg(target_env = "msvc")']
+rustflags = ["-C", "link-arg=/DEPENDENTLOADFLAG:0x800"]
