@@ -33,12 +33,6 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Install Rust
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        profile: minimal
-
     # See: https://github.com/actions/cache/blob/main/examples.md#rust---cargo
     # And also https://github.com/rust-lang/rustup/blob/25dc87dc605adc0843c9369063333997ae806008/.github/workflows/linux-builds-on-stable.yaml#L81
     - name: Cache cargo registry and git trees
@@ -62,18 +56,13 @@ jobs:
         key: ${{ matrix.target }}-cargo-target-dir-${{ steps.cargo-target-cache.outputs.rust_hash }}-${{ hashFiles('**/Cargo.lock') }}
 
     - name: cargo build
-      uses: actions-rs/cargo@v1
-      with:
-        command: build
+      run: cargo build
 
     - name: cargo test
-      uses: actions-rs/cargo@v1
-      with:
-        command: test
+      run: cargo build
 
     - name: Clear the cargo caches
       if: ${{ ! steps.do-cache-cargo.outputs.cache-hit }}
       run: |
         cargo install cargo-cache --no-default-features --features ci-autoclean
         cargo-cache
-
