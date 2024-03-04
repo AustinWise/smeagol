@@ -216,7 +216,7 @@ impl Wiki {
 
     pub fn read_file(&self, file_path: &[&str]) -> Result<Vec<u8>, MyError> {
         lazy_static! {
-            static ref RE: Regex = Regex::new(r"\[\[(.+?)\]\]").unwrap();
+            static ref RE: Regex = Regex::new(r"^{{(.+?)}}$").unwrap();
         }
         let mut res = self.0.repository.read_file(file_path);
         if let Ok(mut bytes) = res {
