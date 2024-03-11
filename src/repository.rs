@@ -32,7 +32,7 @@ pub trait Repository {
     fn enumerate_files(&self, directory: &[&str]) -> Result<Vec<RepositoryItem>, MyError>;
 }
 
-pub struct RepoBox(Box<dyn Repository + Sync + Send>);
+pub struct RepoBox(pub Box<dyn Repository + Sync + Send>);
 
 impl Deref for RepoBox {
     type Target = dyn Repository + Sync + Send;

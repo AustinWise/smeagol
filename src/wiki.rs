@@ -216,18 +216,23 @@ impl Wiki {
 
     pub fn read_file(&self, file_path: &[&str]) -> Result<Vec<u8>, MyError> {
         lazy_static! {
-            static ref RE: Regex = Regex::new(r"^{{(.+?)}}$").unwrap();
+            static ref RE: Regex = Regex::new(r"\{\{(.+?)\}\}").unwrap();
         }
         let mut res = self.0.repository.read_file(file_path);
         if let Ok(mut bytes) = res {
             while RE.is_match(&bytes) {
-                bytes = RE.replace(&bytes, |caps: &Captures| {
-                    if let Ok(filename) = str::from_utf8(&caps[1]) {
-                        self.0.repository.read_file(&[filename]).unwrap_or(b"**read error**".to_vec())
-                    } else {
-                        b"**conversion error**".to_vec()
-                    }
-                }).to_vec();
+                bytes = RE
+                    .replace(&bytes, |caps: &Captures| {
+                        if let Ok(filename) = str::from_utf8(&caps[1]) {
+                            self.0
+                                .repository
+                                .read_file(&[filename])
+                                .unwrap_or(b"**read error**".to_vec())
+                        } else {
+                            b"**conversion error**".to_vec()
+                        }
+                    })
+                    .to_vec();
             }
             res = Ok(bytes)
         }
@@ -327,5 +332,78 @@ impl Wiki {
                 })
             })
             .collect())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::repository::Repository;
+    use std::collections::HashMap;
+
+    struct FakeRepo {
+        files: HashMap<String, String>,
+    }
+
+    impl Repository for FakeRepo {
+        fn capabilities(&self) -> RepositoryCapability {
+            RepositoryCapability::empty()
+        }
+        fn read_file(&self, file_path: &[&str]) -> Result<Vec<u8>, MyError> {
+            let key = file_path.join("/");
+            if let Some(f) = self.files.get(&key) {
+                Ok(f.as_bytes().to_vec())
+            } else {
+                Err(MyError::InvalidPath)
+            }
+        }
+        fn write_file(
+            &self,
+            _file_path: &[&str],
+            _message: &str,
+            _content: &str,
+        ) -> Result<(), MyError> {
+            unimplemented!();
+        }
+        fn directory_exists(&self, _path: &[&str]) -> Result<bool, MyError> {
+            unimplemented!();
+        }
+        fn file_exists(&self, _path: &[&str]) -> Result<bool, MyError> {
+            unimplemented!();
+        }
+
+        fn enumerate_files(&self, _directory: &[&str]) -> Result<Vec<RepositoryItem>, MyError> {
+            Ok(vec![])
+        }
+    }
+
+    fn create_fake_wiki(files: HashMap<String, String>) -> Wiki {
+        let settings = Settings::new("index.md", false);
+        let repo = FakeRepo { files };
+        let repo_box = RepoBox(Box::new(repo));
+        Wiki::new(settings, repo_box).unwrap()
+    }
+
+    #[test]
+    fn test_reading() {
+        let wiki = create_fake_wiki(HashMap::from([(
+            "stuff.md".to_owned(),
+            "things".to_owned(),
+        )]));
+        let result = String::from_utf8(wiki.read_file(&["stuff.md"]).unwrap()).unwrap();
+        assert_eq!(result, "things");
+    }
+
+    #[test]
+    fn test_transclusion() {
+        let wiki = create_fake_wiki(HashMap::from([
+            (
+                "stuff.md".to_owned(),
+                "things\n{{more_stuff.md}}\nmore things".to_owned(),
+            ),
+            ("more_stuff.md".to_owned(), "much more stuff".to_owned()),
+        ]));
+        let result = String::from_utf8(wiki.read_file(&["stuff.md"]).unwrap()).unwrap();
+        assert_eq!(result, "things\nmuch more stuff\nmore things");
     }
 }
