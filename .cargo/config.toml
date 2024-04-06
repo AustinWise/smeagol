@@ -1,0 +1,23 @@
+# NOTE NOTE NOTE NOTE NOTE NOTE
+#
+# For some reason these flags are NOT respected when running in GitHub actions. They are respected
+# when building locally. So keep these settings in sync with .github/workflows/release.yml .
+#
+# NOTE NOTE NOTE NOTE NOTE NOTE
+
+
+# Use LLD since it is faster.
+# TODO: figure out how to make this work in CI
+#[target.x86_64-unknown-linux-gnu]
+#rustflags = ["-C", "link-arg=-fuse-ld=lld"]
+#[target.aarch64-unknown-linux-gnu]
+#rustflags = ["-C", "link-arg=-fuse-ld=lld"]
+
+# We only link to DLLs in System32, so limit the OS loader to looking in there.
+# https://learn.microsoft.com/cpp/build/reference/dependentloadflag
+# Build all crates with a statically linked MSVCRT. Specifically crates
+# that use `cc` in their build scripts (like libgit2-sys), will detect this
+# and compile objects appropriately. If there is a way to put this into a
+# Cargo config file some where, let me know. .cargo/config did not work.
+[target.'cfg(target_env = "msvc")']
+rustflags = ["-C", "link-arg=/DEPENDENTLOADFLAG:0x800", "-C", "target-feature=+crt-static"]

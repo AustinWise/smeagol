@@ -102,15 +102,17 @@ jobs:
 
     steps:
 
-      # Build all crates with a statically linked MSVCRT. Specifically crates
-      # that use `cc` in their build scripts (like libgit2-sys), will detect this
-      # and compile objects appropriatly. If there is a way to put this into a
-      # Cargo config file some where, let me know. .cargo/config did not work.
-      - name: Statically link MSVCRT
+      # NOTE NOTE NOTE NOTE NOTE NOTE
+      #
+      # See .cargo/config.toml for an explination of these settings.
+      # Keep these settings and that file in sync.
+      #
+      # NOTE NOTE NOTE NOTE NOTE NOTE
+      - name: Rust Flags
         shell: bash
         if: matrix.os == 'windows'
         run: |
-          echo "RUSTFLAGS=-C target-feature=+crt-static" >> $GITHUB_ENV
+          echo "RUSTFLAGS=-C target-feature=+crt-static -C target-feature=+crt-static" >> $GITHUB_ENV
 
       - name: Checkout repository
         uses: actions/checkout@v4
