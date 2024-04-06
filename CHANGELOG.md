@@ -1,7 +1,4 @@
-WIP
-=====
-
-0.4.8 (2024-04-06)
+0.4.9 (2024-04-06)
 =====
 
 Use `/DEPENDENTLOADFLAG` to mitigate hypothetical DLL injection attacks on Windows.

@@ -112,7 +112,7 @@ jobs:
         shell: bash
         if: matrix.os == 'windows'
         run: |
-          echo "RUSTFLAGS=-C target-feature=+crt-static -C target-feature=+crt-static" >> $GITHUB_ENV
+          echo "RUSTFLAGS=-C target-feature=+crt-static -C link-arg=/DEPENDENTLOADFLAG:0x800" >> $GITHUB_ENV
 
       - name: Checkout repository
         uses: actions/checkout@v4
