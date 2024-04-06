@@ -5,7 +5,7 @@ WIP
 =====
 
 * Implement support for transclusion (Thanks @therealbstern!) [#61](https://github.com/AustinWise/smeagol/issues/61)
-* Use `/DEPENDENTLOADFLAG` to mitigate hypothetical DLL injection attacks on Windows. [#61](https://github.com/AustinWise/smeagol/issues/61)
+* Use `/DEPENDENTLOADFLAG` to mitigate hypothetical DLL injection attacks on Windows. [#62](https://github.com/AustinWise/smeagol/issues/62)
 * Update some dependencies based on CVEs that Dependabot flagged. These CVEs are unlikely to pose
   a risk to typical uses of Smeagol.
 
