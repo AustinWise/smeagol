@@ -1679,7 +1679,7 @@ checksum = "4dccd0940a2dcdf68d092b8cbab7dc0ad8fa938bf95787e1b916b0e3d0e8e970"
 
 [[package]]
 name = "smeagol-wiki"
-version = "0.4.6"
+version = "0.4.7"
 dependencies = [
  "askama",
  "bitflags 1.3.2",

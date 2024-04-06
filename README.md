@@ -73,6 +73,17 @@ root directory of the wiki:
 * `index-page` on Gollum defaults to `Home`. Smeagol defaults to `README` to be
   compatible with online code hosting systems such as GitHub and Azure Devops.
 * The default port is `8000` rather than `4567`.
+* Support for transclusion. If a line contains `{{file-name.md}}`, the contents of `file-name.md`
+  will replace that line.
+
+## Security
+
+Smeagol is intended to be run on your local computer to read your own private data. It is not
+designed to be exposed to the public internet: there is no authentication.
+
+That said, there is one class of security problem I would be interested in hearing about: opening
+a maliciously designed Wiki with Smeagol either causing code execution or writing to files outside
+the wiki directory. Please file an issue if you encounter such a problem.
 
 ## Why Rust, please tell me more about why you love Rust
 
