@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use lazy_static::lazy_static;
 
-use regex::bytes::{Captures, Regex};
+use regex::bytes::{Captures, Regex, RegexBuilder};
 
 use tantivy::collector::TopDocs;
 use tantivy::query::QueryParser;
@@ -216,7 +216,10 @@ impl Wiki {
 
     pub fn read_file(&self, file_path: &[&str]) -> Result<Vec<u8>, MyError> {
         lazy_static! {
-            static ref RE: Regex = Regex::new(r"\{\{(.+?)\}\}").unwrap();
+            static ref RE: Regex = RegexBuilder::new(r"^\{\{(.+?)\}\}$")
+                .multi_line(true)
+                .build()
+                .unwrap();
         }
         let mut res = self.0.repository.read_file(file_path);
         if let Ok(mut bytes) = res {
@@ -408,13 +411,24 @@ mod tests {
     }
 
     #[test]
-    fn test_transclusion_failed() {
+    fn test_transclusion_within_line() {
         let wiki = create_fake_wiki(HashMap::from([
             (
                 "stuff.md".to_owned(),
-                "things\n{{does-not-exist.md}}\nmore things".to_owned(),
+                "things {{more_stuff.md}} more things".to_owned(),
             ),
+            ("more_stuff.md".to_owned(), "much more stuff".to_owned()),
         ]));
+        let result = String::from_utf8(wiki.read_file(&["stuff.md"]).unwrap()).unwrap();
+        assert_eq!(result, "things {{more_stuff.md}} more things");
+    }
+
+    #[test]
+    fn test_transclusion_failed() {
+        let wiki = create_fake_wiki(HashMap::from([(
+            "stuff.md".to_owned(),
+            "things\n{{does-not-exist.md}}\nmore things".to_owned(),
+        )]));
         let result = String::from_utf8(wiki.read_file(&["stuff.md"]).unwrap()).unwrap();
         assert_eq!(result, "things\n**read error**\nmore things");
     }
