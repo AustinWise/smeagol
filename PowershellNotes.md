@@ -1,6 +1,12 @@
 
 # Notes about detecting Windows architecture in PowerShell
 
+Update for year 2024: at this point, the method described in the footnote at the end of this article
+is probably good enough for most user-mode applications. It is only missing on older versions of
+Windows and only gives the wrong answer on earlier versions of ARM64 Windows 11. Given the current
+low levels of adoption of Windows on Arm64, and the minor consequences of getting the answer wrong
+(your program will run slightly slower in emulation), it's good enough.
+
 This explains why the logic for detecting the OS native architecture is
 so convoluted in the [PowerShell install script](site/install.ps1).
 

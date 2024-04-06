@@ -105,7 +105,7 @@ namespace TEMP_NAMESPACE_REPLACE_ME
             }
 
             // NOTE: When called from ARM64EC mode, this function gives the wrong answer!
-            // Specifically it return x86_64. And as of Windows 11, PowerShell.exe is a
+            // Specifically it return x86_64. On Windows 11 prior to 22H2, PowerShell.exe is a
             // ARM64EC process.
             SYSTEM_INFO sysInfo;
             GetNativeSystemInfo(out sysInfo);
