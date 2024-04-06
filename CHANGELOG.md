@@ -1,11 +1,13 @@
-WIP
+0.4.8 (2024-04-06)
 =====
+
+Use `/DEPENDENTLOADFLAG` to mitigate hypothetical DLL injection attacks on Windows.
+This was attempted in the prior release, but CI did not pick up the flag.
 
 0.4.7 (2024-04-05)
 =====
 
 * Implement support for transclusion (Thanks @therealbstern!) [#61](https://github.com/AustinWise/smeagol/issues/61)
-* Use `/DEPENDENTLOADFLAG` to mitigate hypothetical DLL injection attacks on Windows. [#62](https://github.com/AustinWise/smeagol/issues/62)
 * Update some dependencies based on CVEs that Dependabot flagged. These CVEs are unlikely to pose
   a risk to typical uses of Smeagol.
 
