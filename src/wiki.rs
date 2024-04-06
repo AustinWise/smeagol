@@ -406,4 +406,16 @@ mod tests {
         let result = String::from_utf8(wiki.read_file(&["stuff.md"]).unwrap()).unwrap();
         assert_eq!(result, "things\nmuch more stuff\nmore things");
     }
+
+    #[test]
+    fn test_transclusion_failed() {
+        let wiki = create_fake_wiki(HashMap::from([
+            (
+                "stuff.md".to_owned(),
+                "things\n{{does-not-exist.md}}\nmore things".to_owned(),
+            ),
+        ]));
+        let result = String::from_utf8(wiki.read_file(&["stuff.md"]).unwrap()).unwrap();
+        assert_eq!(result, "things\n**read error**\nmore things");
+    }
 }
