@@ -12,9 +12,10 @@ Non goals include:
 
 * Support for multiple users.
 
-Phrased in another way, the goal of this project is to create something roughly
-like [Gollum](https://github.com/gollum/gollum), but does not take half an hour
-to `gem install` on a low-powered Chromebook.
+Phrased in another way, the goal of this project is to create something that behaves
+like [Gollum](https://github.com/gollum/gollum) be installs easily and quickly. This is contrasted
+with the Gollum install experience of having to deal with the slowness and complication of setting
+up a Ruby environment and running `gem install`.
 
 ## Getting started
 
@@ -22,7 +23,7 @@ See the [smeagol.dev website](https://smeagol.dev/) for more install options.
 
 If you use the Rust programming language, you can also install this tool using Cargo:
 
-```
+```bash
 cargo install smeagol-wiki
 ```
 
@@ -32,7 +33,7 @@ Extract the `smeagol-wiki` executable from the compressed archive.
 containing the Markdown files you want to serve. You can pass
 a command line argument to it to specify the directory:
 
-```
+```bash
 smeagol-wiki ~/wiki
 ```
 
