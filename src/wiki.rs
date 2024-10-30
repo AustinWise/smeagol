@@ -286,7 +286,7 @@ impl Wiki {
             .0
             .index
             .reader_builder()
-            .reload_policy(ReloadPolicy::OnCommit)
+            .reload_policy(ReloadPolicy::OnCommitWithDelay)
             .try_into()?;
 
         let searcher = reader.searcher();
