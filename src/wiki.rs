@@ -141,7 +141,7 @@ fn index_file(
         url += "/";
         url += path;
     }
-    let mut doc = Document::default();
+    let mut doc = TantivyDocument::default();
     doc.add_text(search_fields.path, &url);
     doc.add_text(search_fields.title, page.title);
     doc.add_text(search_fields.body, page.body);
