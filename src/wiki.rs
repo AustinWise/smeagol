@@ -307,7 +307,7 @@ impl Wiki {
         Ok(top_docs
             .iter()
             .filter_map(|(score, doc_address)| {
-                let doc = match searcher.doc(*doc_address) {
+                let doc = match searcher.doc::<TantivyDocument>(*doc_address) {
                     Ok(doc) => doc,
                     Err(_) => return None,
                 };
@@ -317,13 +317,13 @@ impl Wiki {
                 let title = doc
                     .get_first(fields.title)
                     .unwrap()
-                    .as_text()
+                    .as_str()
                     .unwrap()
                     .to_owned();
                 let path = doc
                     .get_first(fields.path)
                     .unwrap()
-                    .as_text()
+                    .as_str()
                     .unwrap()
                     .to_owned();
                 let snippet_html = highlight(snippet);
