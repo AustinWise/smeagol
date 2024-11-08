@@ -141,7 +141,7 @@ fn index_file(
         url += "/";
         url += path;
     }
-    let mut doc = Document::default();
+    let mut doc = TantivyDocument::default();
     doc.add_text(search_fields.path, &url);
     doc.add_text(search_fields.title, page.title);
     doc.add_text(search_fields.body, page.body);
@@ -286,7 +286,7 @@ impl Wiki {
             .0
             .index
             .reader_builder()
-            .reload_policy(ReloadPolicy::OnCommit)
+            .reload_policy(ReloadPolicy::OnCommitWithDelay)
             .try_into()?;
 
         let searcher = reader.searcher();
@@ -307,7 +307,7 @@ impl Wiki {
         Ok(top_docs
             .iter()
             .filter_map(|(score, doc_address)| {
-                let doc = match searcher.doc(*doc_address) {
+                let doc = match searcher.doc::<TantivyDocument>(*doc_address) {
                     Ok(doc) => doc,
                     Err(_) => return None,
                 };
@@ -317,13 +317,13 @@ impl Wiki {
                 let title = doc
                     .get_first(fields.title)
                     .unwrap()
-                    .as_text()
+                    .as_str()
                     .unwrap()
                     .to_owned();
                 let path = doc
                     .get_first(fields.path)
                     .unwrap()
-                    .as_text()
+                    .as_str()
                     .unwrap()
                     .to_owned();
                 let snippet_html = highlight(snippet);
