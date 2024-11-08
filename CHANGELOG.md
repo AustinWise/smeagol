@@ -1,5 +1,10 @@
-WIP
+0.4.10 (2024-11-07)
 =====
+
+This release contains fixes for compiling Smeagol from source.
+
+* Update the `time` crate to fix a build error with the latest Rust compiler.
+* Update `tanvity` to fix build when building with the latest version of `zstd`. Thanks @kachick! [#66](https://github.com/AustinWise/smeagol/issues/66)
 
 0.4.9 (2024-04-06)
 =====
