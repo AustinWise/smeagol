@@ -17,11 +17,11 @@
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=smeagol",
-                    "--package=smeagol"
+                    "--bin=smeagol-wiki",
+                    "--package=smeagol-wiki"
                 ],
                 "filter": {
-                    "name": "smeagol",
+                    "name": "smeagol-wiki",
                     "kind": "bin"
                 }
             },
