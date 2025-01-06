@@ -1,4 +1,4 @@
-use pulldown_cmark::{html, Event, HeadingLevel, Options, Parser, Tag};
+use pulldown_cmark::{html, Event, HeadingLevel, Options, Parser, Tag, TagEnd};
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
@@ -16,10 +16,16 @@ fn try_get_h1_title(
     events: &mut Vec<Event>,
 ) -> String {
     if settings.h1_title() && events.len() >= 2 {
-        if let Event::Start(Tag::Heading(HeadingLevel::H1, _, _)) = events[0] {
+        if let Event::Start(Tag::Heading {
+            level: HeadingLevel::H1,
+            id: _,
+            classes: _,
+            attrs: _,
+        }) = events[0]
+        {
             let end_ndx = events
                 .iter()
-                .position(|e| matches!(e, Event::End(Tag::Heading(HeadingLevel::H1, _, _))))
+                .position(|e| matches!(e, Event::End(TagEnd::Heading(HeadingLevel::H1))))
                 .unwrap();
             let title = events[1..end_ndx]
                 .iter()

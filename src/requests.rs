@@ -91,7 +91,7 @@ impl<'r> WikiPagePath<'r> {
         Some(self.file_stem_and_extension()?.1)
     }
 
-    fn breadcrumbs_helper<F: Fn(&'r [&'r str]) -> Origin>(
+    fn breadcrumbs_helper<F: Fn(&'r [&'r str]) -> Origin<'r>>(
         &'r self,
         mut dirs: &'r [&'r str],
         uri_func: F,
@@ -129,7 +129,7 @@ impl<'r> FromSegments<'r> for WikiPagePath<'r> {
     }
 }
 
-impl<'r> std::fmt::Display for WikiPagePath<'r> {
+impl std::fmt::Display for WikiPagePath<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         if self.segments.is_empty() {
             write!(f, "/")?;
@@ -142,7 +142,7 @@ impl<'r> std::fmt::Display for WikiPagePath<'r> {
     }
 }
 
-impl<'r> UriDisplay<Path> for WikiPagePath<'r> {
+impl UriDisplay<Path> for WikiPagePath<'_> {
     fn fmt(&self, f: &mut Formatter<Path>) -> Result<(), std::fmt::Error> {
         for part in &self.segments {
             f.write_value(part)?;
