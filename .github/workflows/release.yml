@@ -76,12 +76,12 @@ jobs:
             use-cross: true
           - build: macos-x64
             os: macos
-            image: macos-12
+            image: macos-15
             target: x86_64-apple-darwin
             use-cross: false
           - build: macos-arm64
             os: macos
-            image: macos-12
+            image: macos-15
             target: aarch64-apple-darwin
             use-cross: false
           - build: win-x64-msvc
