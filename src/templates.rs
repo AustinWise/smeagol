@@ -4,7 +4,12 @@ use crate::assets::favicon_png_uri;
 use crate::assets::primer_css_uri;
 use crate::wiki::SearchResult;
 
+use shadow_rs::shadow;
+
+shadow!(build);
+
 const VERSION: &str = env!("CARGO_PKG_VERSION");
+const SHORT_COMMIT: &str = build::SHORT_COMMIT;
 
 pub struct Breadcrumb<'a> {
     name: &'a str,
@@ -28,6 +33,7 @@ struct ViewPageTemplate<'a> {
     content: &'a str,
     breadcrumbs: Vec<Breadcrumb<'a>>,
     version: &'a str,
+    short_sha: &'a str,
 }
 
 pub fn render_page(
@@ -48,6 +54,7 @@ pub fn render_page(
         content,
         breadcrumbs,
         version: VERSION,
+        short_sha: SHORT_COMMIT,
     };
     // TODO: render into a stream directly instead of crating this String.
     page.render()
@@ -64,6 +71,7 @@ struct PagePlaceholderTemplate<'a> {
     overview_url: &'a str,
     breadcrumbs: Vec<Breadcrumb<'a>>,
     version: &'a str,
+    short_sha: &'a str,
 }
 
 pub fn render_page_placeholder(
@@ -84,6 +92,7 @@ pub fn render_page_placeholder(
         overview_url,
         breadcrumbs,
         version: VERSION,
+        short_sha: SHORT_COMMIT,
     };
     template.render()
 }
@@ -104,6 +113,7 @@ struct EditTemplate<'a> {
     breadcrumbs: Vec<Breadcrumb<'a>>,
     authenticity_token: &'a str,
     version: &'a str,
+    short_sha: &'a str,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -132,6 +142,7 @@ pub fn render_edit_page(
         breadcrumbs,
         authenticity_token,
         version: VERSION,
+        short_sha: SHORT_COMMIT,
     };
     template.render()
 }
@@ -160,6 +171,7 @@ struct OverviewTemplate<'a> {
     files: Vec<DirectoryEntry<'a>>,
     overview_url: &'a str,
     version: &'a str,
+    short_sha: &'a str,
 }
 
 pub fn render_overview(
@@ -183,6 +195,7 @@ pub fn render_overview(
         files,
         overview_url: "/overview",
         version: VERSION,
+        short_sha: SHORT_COMMIT,
     };
     template.render()
 }
@@ -200,6 +213,7 @@ struct SearchResultsTemplate<'a> {
     next_url: Option<String>,
     overview_url: &'a str,
     version: &'a str,
+    short_sha: &'a str,
 }
 
 pub fn render_search_results(
@@ -222,6 +236,7 @@ pub fn render_search_results(
         next_url,
         overview_url: "/overview",
         version: VERSION,
+        short_sha: SHORT_COMMIT,
     };
     template.render()
 }

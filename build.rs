@@ -6,6 +6,7 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use ring::digest::{Context, Digest, SHA256};
+use shadow_rs::{BuildPattern, ShadowBuilder};
 
 struct ContextWriter(Context);
 
@@ -148,6 +149,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("cargo:rustc-link-arg-bins=/MANIFEST:embed");
         println!("cargo:rustc-link-arg-bins=/MANIFESTINPUT:windows_manifest.xml");
     }
+
+    ShadowBuilder::builder()
+        .build_pattern(BuildPattern::RealTime)
+        .build()
+        .unwrap();
 
     Ok(())
 }

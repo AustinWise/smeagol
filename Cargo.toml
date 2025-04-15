@@ -15,6 +15,7 @@ strip = "symbols"
 
 [build-dependencies]
 ring = "0.17"
+shadow-rs = "1.1.1"
 
 [dependencies]
 askama = "0.12"
@@ -35,6 +36,7 @@ strum_macros = "0.26"
 tantivy = "0.22"
 thiserror = "2.0"
 toml = "0.8"
+shadow-rs = { version = "1.1.1", default-features = false }
 
 # just to satisfy a dependabot warning: CVE-2024-12224
 url = "2.5.4"
