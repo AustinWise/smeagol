@@ -7,8 +7,12 @@ use serde::Deserialize;
 use crate::error::MyError;
 use crate::repository::{RepoBox, RepositoryItem};
 
+use shadow_rs::shadow;
+
+shadow!(build);
+
 #[derive(clap::Parser, Debug, Clone)]
-#[command(author, version, about, long_about = None)]
+#[command(author, version = const_format::formatcp!("{}({})", build::PKG_VERSION, build::SHORT_COMMIT), about, long_about = None)]
 pub struct Args {
     /// Path to the directory containing the wiki Git repository.
     git_repo: Option<PathBuf>,

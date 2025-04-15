@@ -1934,6 +1934,7 @@ dependencies = [
  "askama",
  "bitflags",
  "clap",
+ "const_format",
  "git2",
  "lazy_static",
  "log",
