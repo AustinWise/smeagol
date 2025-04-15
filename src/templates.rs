@@ -4,6 +4,8 @@ use crate::assets::favicon_png_uri;
 use crate::assets::primer_css_uri;
 use crate::wiki::SearchResult;
 
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
 pub struct Breadcrumb<'a> {
     name: &'a str,
     href: String,
@@ -25,6 +27,7 @@ struct ViewPageTemplate<'a> {
     overview_url: &'a str,
     content: &'a str,
     breadcrumbs: Vec<Breadcrumb<'a>>,
+    version: &'a str,
 }
 
 pub fn render_page(
@@ -44,6 +47,7 @@ pub fn render_page(
         overview_url,
         content,
         breadcrumbs,
+        version: VERSION,
     };
     // TODO: render into a stream directly instead of crating this String.
     page.render()
@@ -59,6 +63,7 @@ struct PagePlaceholderTemplate<'a> {
     create_url: &'a str,
     overview_url: &'a str,
     breadcrumbs: Vec<Breadcrumb<'a>>,
+    version: &'a str,
 }
 
 pub fn render_page_placeholder(
@@ -78,6 +83,7 @@ pub fn render_page_placeholder(
         create_url,
         overview_url,
         breadcrumbs,
+        version: VERSION,
     };
     template.render()
 }
@@ -97,6 +103,7 @@ struct EditTemplate<'a> {
     content: &'a str,
     breadcrumbs: Vec<Breadcrumb<'a>>,
     authenticity_token: &'a str,
+    version: &'a str,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -124,6 +131,7 @@ pub fn render_edit_page(
         content,
         breadcrumbs,
         authenticity_token,
+        version: VERSION,
     };
     template.render()
 }
@@ -151,6 +159,7 @@ struct OverviewTemplate<'a> {
     directories: Vec<DirectoryEntry<'a>>,
     files: Vec<DirectoryEntry<'a>>,
     overview_url: &'a str,
+    version: &'a str,
 }
 
 pub fn render_overview(
@@ -173,6 +182,7 @@ pub fn render_overview(
         directories,
         files,
         overview_url: "/overview",
+        version: VERSION,
     };
     template.render()
 }
@@ -189,6 +199,7 @@ struct SearchResultsTemplate<'a> {
     prev_url: Option<String>,
     next_url: Option<String>,
     overview_url: &'a str,
+    version: &'a str,
 }
 
 pub fn render_search_results(
@@ -210,6 +221,7 @@ pub fn render_search_results(
         prev_url,
         next_url,
         overview_url: "/overview",
+        version: VERSION,
     };
     template.render()
 }
