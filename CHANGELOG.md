@@ -1,5 +1,10 @@
-WIP
+0.5.0
 =====
+
+* Add the ability to create a new page. Thanks @kachick! [#72](https://github.com/AustinWise/smeagol/pull/72)
+* Show the version and Git hash at the bottom of the page. Thanks @kachick! [#73](https://github.com/AustinWise/smeagol/pull/73)
+* Update version of Ubuntu used to build release and run CI. Thanks @kachick! [#74](https://github.com/AustinWise/smeagol/pull/74)
+* Various dependency updates.
 
 0.4.10 (2024-11-07)
 =====
