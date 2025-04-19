@@ -1,7 +1,7 @@
 use std::{
     io::{Read, Write},
     ops::{Deref, DerefMut},
-    path::{Path, PathBuf},
+    path::PathBuf,
     sync::Mutex,
 };
 
@@ -51,25 +51,31 @@ fn path_element_ok(element: &str) -> bool {
     !element.starts_with('.')
 }
 
+fn canonicalize(root_dir: PathBuf, relative_path: &[&str]) -> Result<PathBuf, MyError> {
+    let root_dir = root_dir.to_path_buf();
+    let mut path = root_dir.clone();
+    for part in relative_path {
+        if !path_element_ok(part) {
+            return Err(MyError::InvalidPath);
+        }
+        path.push(part);
+    }
+
+    let absolute_path = std::path::absolute(path)?;
+    if !absolute_path.starts_with(root_dir) {
+        return Err(MyError::InvalidPath);
+    }
+
+    Ok(absolute_path.to_path_buf())
+}
+
 struct FileSystemRepository {
     root_dir: PathBuf,
 }
 
 impl FileSystemRepository {
     fn canonicalize_path(&self, relative_path: &[&str]) -> Result<PathBuf, MyError> {
-        let mut path = self.root_dir.to_path_buf();
-        for part in relative_path {
-            if !path_element_ok(part) {
-                return Err(MyError::InvalidPath);
-            }
-            path.push(part);
-        }
-
-        // TODO: figure out if there is way to check for path traversal attacks
-        //       when creating a new file. std::fs::canonicalize does not work
-        //       for non-existent files.
-        //       Currently we are relying on rocket to canonicalize the path.
-        Ok(path)
+        canonicalize(self.root_dir.clone(), relative_path)
     }
 }
 
@@ -79,7 +85,7 @@ impl Repository for FileSystemRepository {
     }
 
     fn read_file(&self, file_path: &[&str]) -> Result<Vec<u8>, MyError> {
-        let path = self.canonicalize_path(file_path)?;
+        let path = canonicalize(self.root_dir.clone(), file_path)?;
         let mut f = std::fs::File::open(path)?;
         let mut buf = Vec::new();
         f.read_to_end(&mut buf)?;
@@ -88,6 +94,9 @@ impl Repository for FileSystemRepository {
 
     fn write_file(&self, file_path: &[&str], _message: &str, content: &str) -> Result<(), MyError> {
         let path = self.canonicalize_path(file_path)?;
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
         let mut f = std::fs::File::create(path)?;
         f.write_all(content.as_bytes())?;
         f.flush()?;
@@ -199,8 +208,6 @@ impl Repository for GitRepository {
             return Err(MyError::InvalidPath);
         }
 
-        let file_path = file_path.join("/");
-
         // Get as many Git objects ready before writing the file.
         let repo = self.repo.lock().unwrap();
         let mut index = repo.index()?;
@@ -208,18 +215,20 @@ impl Repository for GitRepository {
         let head = repo.head()?;
         let head_commit = head.peel_to_commit()?;
 
-        let mut path = self.path.clone();
-        path.push(&file_path);
-        let path = path.canonicalize()?;
-        if !path.starts_with(&self.path) {
-            return Err(MyError::InvalidPath);
+        let path = canonicalize(self.path.clone(), file_path)?;
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
         }
 
         // TODO: maybe write the file directly into the index or as a tree.
         // This would support bare Git repos.
         std::fs::write(&path, content)?;
 
-        index.add_path(Path::new(&file_path))?;
+        let git_path = path
+            .strip_prefix(self.path.clone())
+            .map_err(|_| MyError::InvalidPath)?;
+
+        index.add_path(git_path)?;
         index.write()?;
         let tree = index.write_tree()?;
         let tree = repo.find_tree(tree)?;

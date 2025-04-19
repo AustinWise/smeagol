@@ -187,12 +187,17 @@ fn edit_save_inner(
     path: WikiPagePath,
     content: Form<PageEditForm<'_>>,
     w: Wiki,
+    as_create: bool,
 ) -> Result<response::Redirect, MyError> {
     if content.authenticity_token != *CSRF_TOKEN {
         return Err(MyError::Csrf);
     }
     let message = if content.message.trim().is_empty() {
-        let message = default_edit_message(&path);
+        let message = if as_create {
+            default_new_message(&path)
+        } else {
+            default_edit_message(&path)
+        };
         Cow::Owned(message)
     } else {
         Cow::Borrowed(content.message.trim())
@@ -207,17 +212,38 @@ fn edit_save(
     content: Form<PageEditForm<'_>>,
     w: Wiki,
 ) -> Result<response::Redirect, MyError> {
-    edit_save_inner(path, content, w)
+    edit_save_inner(path, content, w, false)
+}
+
+#[post("/new/<path..>", data = "<content>")]
+fn new_save(
+    path: WikiPagePath,
+    content: Form<PageEditForm<'_>>,
+    w: Wiki,
+) -> Result<response::Redirect, MyError> {
+    edit_save_inner(path, content, w, true)
 }
 
 fn default_edit_message(path: &WikiPagePath) -> String {
-    format!("Update {}", path.file_name().expect("Ill-formed path"))
+    format!("Update {}", path.segments.join("/"))
 }
 
-fn edit_view_inner(path: WikiPagePath, w: Wiki) -> Result<(ContentType, String), MyError> {
+fn default_new_message(path: &WikiPagePath) -> String {
+    format!("Create {}", path.segments.join("/"))
+}
+
+fn edit_view_inner(
+    path: WikiPagePath,
+    w: Wiki,
+    as_create: bool,
+) -> Result<(ContentType, String), MyError> {
     let content = w.read_file(&path.segments).unwrap_or_else(|_| vec![]);
     let content = std::str::from_utf8(&content)?;
-    let post_url = uri!(edit_save(&path));
+    let post_url = if as_create {
+        uri!(new_save(&path))
+    } else {
+        uri!(edit_save(&path))
+    };
     let view_url = uri!(page(&path));
     let preview_url = uri!(preview(&path));
     let title = format!("Editing {}", path.file_name().expect("Ill-formed path"));
@@ -225,7 +251,7 @@ fn edit_view_inner(path: WikiPagePath, w: Wiki) -> Result<(ContentType, String),
         .repo_capabilities()
         .contains(RepositoryCapability::SUPPORTS_EDIT_MESSAGE)
     {
-        Some(default_edit_message(&path))
+        Some("Explain this change. (Optional)".to_string())
     } else {
         None
     };
@@ -244,7 +270,12 @@ fn edit_view_inner(path: WikiPagePath, w: Wiki) -> Result<(ContentType, String),
 
 #[get("/edit/<path..>")]
 fn edit_view(path: WikiPagePath, w: Wiki) -> Result<(ContentType, String), MyError> {
-    edit_view_inner(path, w)
+    edit_view_inner(path, w, false)
+}
+
+#[get("/new/<path..>")]
+fn new_view(path: WikiPagePath, w: Wiki) -> Result<(ContentType, String), MyError> {
+    edit_view_inner(path, w, true)
 }
 
 fn page_response(
@@ -298,7 +329,7 @@ fn page_inner(path: WikiPagePath, w: Wiki) -> Result<WikiPageResponder, MyError>
             } else {
                 match path.file_stem_and_extension() {
                     Some((file_stem, "md")) => {
-                        let create_url = uri!(edit_view(&path));
+                        let create_url = uri!(new_view(&path));
                         let overview_url = uri!(overview(path.directory().unwrap())).to_string();
                         Ok(WikiPageResponder::PagePlaceholder(
                             response::status::NotFound((
@@ -411,7 +442,7 @@ fn index(w: Wiki) -> response::Redirect {
 pub fn mount_routes(rocket: Rocket<Build>) -> Rocket<Build> {
     rocket.mount(
         "/",
-        routes![page, search, edit_save, edit_view, preview, overview, index],
+        routes![page, search, edit_save, new_save, edit_view, new_view, preview, overview, index],
     )
 }
 
