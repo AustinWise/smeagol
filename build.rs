@@ -151,7 +151,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     ShadowBuilder::builder()
-        .build_pattern(BuildPattern::RealTime)
+        .build_pattern(BuildPattern::Lazy)
         .build()
         .unwrap();
 
