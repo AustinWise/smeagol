@@ -1,5 +1,7 @@
 # Smeagol - locally hosted wiki
 
+[![Packaging status](https://repology.org/badge/latest-versions/smeagol.svg?header=PACKAGE)](https://repology.org/project/smeagol/versions)
+
 The goal of this project is to create a wiki software with these properties:
 
 * Compatible with GitHub. This means:
