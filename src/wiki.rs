@@ -8,11 +8,11 @@ use regex::bytes::{Captures, Regex, RegexBuilder};
 use tantivy::collector::TopDocs;
 use tantivy::query::QueryParser;
 use tantivy::schema::*;
+use tantivy::snippet::Snippet;
+use tantivy::snippet::SnippetGenerator;
 use tantivy::Index;
 use tantivy::IndexWriter;
 use tantivy::ReloadPolicy;
-use tantivy::Snippet;
-use tantivy::SnippetGenerator;
 
 use crate::error::MyError;
 use crate::page::get_raw_page;

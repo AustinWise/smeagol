@@ -35,6 +35,6 @@ serde = { version = "1.0", features = ["derive"] }
 shadow-rs = { version = "1.1.1", default-features = false }
 strum = "0.26"
 strum_macros = "0.26"
-tantivy = "0.22"
+tantivy = "0.25"
 thiserror = "2.0"
-toml = "0.8"
+toml = "0.9"
