@@ -77,6 +77,18 @@
                         aria-label="Search site" autocomplete="off">
                 </form>
             </div>
+            {% match chat_url %}
+            {% when Some(val) %}
+            <div class="TableObject-item px-2">
+                <div class="BtnGroup d-flex">
+                    <a class="btn BtnGroup-item btn-sm hide-sm hide-md
+                          minibutton-rename-page" href="{{val}}">
+                        Chat
+                    </a>
+                </div>
+            </div>
+            {% when None %}
+            {% endmatch %}
             <div class="TableObject-item px-2">
                 <div class="BtnGroup d-flex">
                     <a class="btn BtnGroup-item btn-sm hide-sm hide-md
