@@ -10,6 +10,8 @@ use rocket::http::uri::Segments;
 use rocket::http::ContentType;
 use rocket::request::FromSegments;
 use rocket::response;
+use rocket::response::stream::Event;
+use rocket::response::stream::EventStream;
 use rocket::response::Responder;
 use rocket::{Build, Rocket};
 
@@ -19,7 +21,8 @@ use crate::repository::RepositoryCapability;
 use crate::templates;
 use crate::templates::render_search_results;
 use crate::templates::{
-    render_edit_page, render_overview, render_page, render_page_placeholder, Breadcrumb,
+    render_chat, render_edit_page, render_overview, render_page, render_page_placeholder,
+    Breadcrumb,
 };
 use crate::wiki::Wiki;
 
@@ -49,6 +52,10 @@ impl<'r> WikiPagePath<'r> {
         WikiPagePath {
             segments: segments.to_vec(),
         }
+    }
+
+    fn to_path(&self) -> String {
+        self.segments.join("/")
     }
 
     fn append_segment(&self, new_seg: &'r str) -> Self {
@@ -117,6 +124,17 @@ impl<'r> WikiPagePath<'r> {
         self.breadcrumbs_helper(&self.segments, |dirs| {
             uri!(overview(WikiPagePath::from_slice(dirs)))
         })
+    }
+
+    fn chat_breadcrumbs(&'r self) -> Vec<Breadcrumb<'r>> {
+        self.breadcrumbs_helper(&self.segments, |dirs| {
+            uri!(chat(WikiPagePath::from_slice(dirs)))
+        })
+    }
+
+    fn chat_uri(&'r self, w: &Wiki) -> Option<String> {
+        // TODO: use wiki settings to enable or disable
+        Some(uri!(chat(self)).to_string())
     }
 }
 
@@ -281,13 +299,16 @@ fn new_view(path: WikiPagePath, w: Wiki) -> Result<(ContentType, String), MyErro
 fn page_response(
     page: crate::page::Page,
     path: &WikiPagePath,
+    w: &Wiki,
 ) -> Result<(ContentType, String), MyError> {
     let edit_url = uri!(edit_view(path)).to_string();
     let overview_url = uri!(overview(path.directory().unwrap())).to_string();
+    let chat_url = path.chat_uri(w);
     let html = render_page(
         &page.title,
         &edit_url,
         &overview_url,
+        chat_url.as_deref(),
         &page.body,
         path.page_breadcrumbs(),
     )?;
@@ -302,7 +323,7 @@ fn page_inner(path: WikiPagePath, w: Wiki) -> Result<WikiPageResponder, MyError>
                 Some((file_stem, file_ext)) => {
                     match crate::page::get_page(file_stem, file_ext, &bytes, w.settings())? {
                         Some(page_model) => {
-                            WikiPageResponder::Page(page_response(page_model, &path)?)
+                            WikiPageResponder::Page(page_response(page_model, &path, &w)?)
                         }
                         None => match ContentType::from_extension(file_ext) {
                             Some(mine_type) => WikiPageResponder::TypedFile((mine_type, bytes)),
@@ -386,13 +407,42 @@ fn overview_inner(path: WikiPagePath, w: Wiki) -> Result<(ContentType, String), 
         })
         .collect();
 
-    let html = render_overview("Overview", path.overview_breadcrumbs(), directories, files)?;
+    let chat_url = path.chat_uri(&w);
+    let html = render_overview(
+        "Overview",
+        path.overview_breadcrumbs(),
+        chat_url.as_deref(),
+        directories,
+        files,
+    )?;
     Ok((ContentType::HTML, html))
 }
 
 #[get("/overview/<path..>")]
 fn overview(path: WikiPagePath, w: Wiki) -> Result<(ContentType, String), MyError> {
     overview_inner(path, w)
+}
+
+#[post("/chat-post")]
+fn chat_post() -> Result<(ContentType, String), MyError> {
+    let html = "hi from chat_post".to_string();
+    Ok((ContentType::HTML, html))
+}
+
+#[get("/chat-sse/<path..>?<prompt>")]
+fn chat_sse(path: WikiPagePath, prompt: &str) -> EventStream![] {
+    EventStream! {
+            yield Event::data("ping ").event("chat");
+            yield Event::data("pong ").event("done");
+    }
+}
+
+#[get("/chat/<path..>")]
+fn chat(path: WikiPagePath) -> Result<(ContentType, String), MyError> {
+    let breadcrumbs = path.chat_breadcrumbs();
+    let context = path.to_path();
+    let html = render_chat(breadcrumbs, &context)?;
+    Ok((ContentType::HTML, html))
 }
 
 fn search_inner(q: &str, offset: Option<usize>, w: Wiki) -> Result<(ContentType, String), MyError> {
@@ -442,7 +492,10 @@ fn index(w: Wiki) -> response::Redirect {
 pub fn mount_routes(rocket: Rocket<Build>) -> Rocket<Build> {
     rocket.mount(
         "/",
-        routes![page, search, edit_save, new_save, edit_view, new_view, preview, overview, index],
+        routes![
+            chat, chat_post, chat_sse, page, search, edit_save, new_save, edit_view, new_view,
+            preview, overview, index
+        ],
     )
 }
 
