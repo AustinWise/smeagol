@@ -34,7 +34,7 @@ if (-not (Test-Path $bin_dir)) {
 
 # See this document for why the process of determining the native OS arcitecture
 # is so convulated:
-# https://github.com/AustinWise/smeagol/blob/master/PowershellNotes.md
+# https://github.com/AustinWise/smeagol/blob/main/PowershellNotes.md
 $file_extractor_source = @"
 using Microsoft.Win32.SafeHandles;
 using System;

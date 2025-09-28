@@ -6,7 +6,7 @@ on:
       - '**.sh'
   push:
     branches:
-    - master
+    - main
     paths:
       - '**.sh'
 jobs:

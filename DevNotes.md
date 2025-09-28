@@ -20,7 +20,7 @@ Perform the following steps:
 1. Check that `Cargo.toml` has the right version.
 1. `cargo build` to ensure `Cargo.lock` is also updated
 1. `git commit`
-1. `git push origin master`
+1. `git push origin main`
 1. `git tag -a x.x.x` , where `x.x.x` is the version. The body should be the changelog for this
     release. It should look roughly like this (like a Git commit).
 
@@ -37,7 +37,7 @@ Perform the following steps:
 1. Edit `Cargo.toml` and `Changelog.md` with a new version number
 1. `cargo build` to ensure `Cargo.lock` is also updated
 1. `git commit`
-1. `git push origin master`
+1. `git push origin main`
 
 # Profiling binary size using SizeBench
 
