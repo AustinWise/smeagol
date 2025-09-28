@@ -1,5 +1,7 @@
 use std::borrow::Cow;
 
+use ollama_rs::generation::completion::request::GenerationRequest;
+use ollama_rs::Ollama;
 use rocket::form::Form;
 use rocket::http::impl_from_uri_param_identity;
 use rocket::http::uri::fmt::Formatter;
@@ -10,16 +12,21 @@ use rocket::http::uri::Segments;
 use rocket::http::ContentType;
 use rocket::request::FromSegments;
 use rocket::response;
+use rocket::response::stream::Event;
+use rocket::response::stream::EventStream;
 use rocket::response::Responder;
 use rocket::{Build, Rocket};
+use tokio_stream::StreamExt;
 
 use crate::error::MyError;
 use crate::repository;
 use crate::repository::RepositoryCapability;
+use crate::repository::RepositoryItem;
 use crate::templates;
 use crate::templates::render_search_results;
 use crate::templates::{
-    render_edit_page, render_overview, render_page, render_page_placeholder, Breadcrumb,
+    render_chat, render_edit_page, render_overview, render_page, render_page_placeholder,
+    Breadcrumb,
 };
 use crate::wiki::Wiki;
 
@@ -49,6 +56,10 @@ impl<'r> WikiPagePath<'r> {
         WikiPagePath {
             segments: segments.to_vec(),
         }
+    }
+
+    fn to_path(&self) -> String {
+        self.segments.join("/")
     }
 
     fn append_segment(&self, new_seg: &'r str) -> Self {
@@ -117,6 +128,17 @@ impl<'r> WikiPagePath<'r> {
         self.breadcrumbs_helper(&self.segments, |dirs| {
             uri!(overview(WikiPagePath::from_slice(dirs)))
         })
+    }
+
+    fn chat_breadcrumbs(&'r self) -> Vec<Breadcrumb<'r>> {
+        self.breadcrumbs_helper(&self.segments, |dirs| {
+            uri!(chat(WikiPagePath::from_slice(dirs)))
+        })
+    }
+
+    fn chat_uri(&'r self, w: &Wiki) -> Option<String> {
+        // TODO: use wiki settings to enable or disable
+        Some(uri!(chat(self)).to_string())
     }
 }
 
@@ -281,13 +303,16 @@ fn new_view(path: WikiPagePath, w: Wiki) -> Result<(ContentType, String), MyErro
 fn page_response(
     page: crate::page::Page,
     path: &WikiPagePath,
+    w: &Wiki,
 ) -> Result<(ContentType, String), MyError> {
     let edit_url = uri!(edit_view(path)).to_string();
     let overview_url = uri!(overview(path.directory().unwrap())).to_string();
+    let chat_url = path.chat_uri(w);
     let html = render_page(
         &page.title,
         &edit_url,
         &overview_url,
+        chat_url.as_deref(),
         &page.body,
         path.page_breadcrumbs(),
     )?;
@@ -302,7 +327,7 @@ fn page_inner(path: WikiPagePath, w: Wiki) -> Result<WikiPageResponder, MyError>
                 Some((file_stem, file_ext)) => {
                     match crate::page::get_page(file_stem, file_ext, &bytes, w.settings())? {
                         Some(page_model) => {
-                            WikiPageResponder::Page(page_response(page_model, &path)?)
+                            WikiPageResponder::Page(page_response(page_model, &path, &w)?)
                         }
                         None => match ContentType::from_extension(file_ext) {
                             Some(mine_type) => WikiPageResponder::TypedFile((mine_type, bytes)),
@@ -386,13 +411,102 @@ fn overview_inner(path: WikiPagePath, w: Wiki) -> Result<(ContentType, String), 
         })
         .collect();
 
-    let html = render_overview("Overview", path.overview_breadcrumbs(), directories, files)?;
+    let chat_url = path.chat_uri(&w);
+    let html = render_overview(
+        "Overview",
+        path.overview_breadcrumbs(),
+        chat_url.as_deref(),
+        directories,
+        files,
+    )?;
     Ok((ContentType::HTML, html))
 }
 
 #[get("/overview/<path..>")]
 fn overview(path: WikiPagePath, w: Wiki) -> Result<(ContentType, String), MyError> {
     overview_inner(path, w)
+}
+
+#[post("/chat-post")]
+fn chat_post() -> Result<(ContentType, String), MyError> {
+    let html = "hi from chat_post".to_string();
+    Ok((ContentType::HTML, html))
+}
+
+// TODO: remove unwraps
+fn create_prompt(prompt: &str, path: &WikiPagePath, w: &Wiki) -> Result<String, MyError> {
+    let context: String;
+    if let Ok(bytes) = w.read_file(&path.segments) {
+        context = format!(
+            "<file name=\"{}\">\n{}\n</file>",
+            path.to_path(),
+            std::str::from_utf8(&bytes)?
+        );
+    } else if let Ok(files) = w.enumerate_files(&path.segments) {
+        let files_names: Vec<_> = files
+            .iter()
+            .flat_map(|f| match f {
+                RepositoryItem::File(f) => Some(f),
+                RepositoryItem::Directory(_) => None,
+            })
+            .filter(|f| f.ends_with(".md"))
+            .map(|f| path.append_segment(f))
+            .collect();
+        let file_contents: Vec<_> = files_names
+            .iter()
+            .map(|f| w.read_file(&f.segments).unwrap())
+            .collect();
+        let file_prompts: Vec<_> = file_contents
+            .into_iter()
+            .zip(files_names)
+            .map(|(content, file_path)| {
+                format!(
+                    "<file name=\"{}\">\n{}\n</file>",
+                    file_path.to_path(),
+                    std::str::from_utf8(&content).unwrap()
+                )
+            })
+            .collect();
+        context = file_prompts.join("\n");
+    } else {
+        return Err(MyError::InvalidPath);
+    }
+    Ok(format!("{}\n\nThe above is the contents of some files. What follows is the user's prompt.\n\n<prompt>\n{}\n</prompt>", context, prompt))
+}
+
+// TODO: remove unwraps
+#[get("/chat-sse/<path..>?<prompt>")]
+fn chat_sse(path: WikiPagePath, prompt: &str, w: Wiki) -> EventStream![] {
+    let prompt = create_prompt(prompt, &path, &w).unwrap();
+    EventStream! {
+        let ollama = Ollama::default();
+        // TODO: load model name from settings.
+        let model = "mistral:latest".to_string();
+        let mut stream = ollama
+            .generate_stream(GenerationRequest::new(model, prompt))
+            .await
+            .unwrap();
+        let mut markdown = String::new();
+        while let Some(res) = stream.next().await {
+            for gen_response in res.unwrap() {
+                markdown += &gen_response.response;
+            }
+            let parser = pulldown_cmark::Parser::new(&markdown);
+            // TODO: somehow send a DOM diff instead of the entire HTML blob.
+            let mut html_output = String::new();
+            pulldown_cmark::html::push_html(&mut html_output, parser);
+            yield Event::data(html_output).event("chat");
+        }
+        yield Event::data("done").event("done");
+    }
+}
+
+#[get("/chat/<path..>")]
+fn chat(path: WikiPagePath) -> Result<(ContentType, String), MyError> {
+    let breadcrumbs = path.chat_breadcrumbs();
+    let context = path.to_path();
+    let html = render_chat(breadcrumbs, &context)?;
+    Ok((ContentType::HTML, html))
 }
 
 fn search_inner(q: &str, offset: Option<usize>, w: Wiki) -> Result<(ContentType, String), MyError> {
@@ -442,7 +556,10 @@ fn index(w: Wiki) -> response::Redirect {
 pub fn mount_routes(rocket: Rocket<Build>) -> Rocket<Build> {
     rocket.mount(
         "/",
-        routes![page, search, edit_save, new_save, edit_view, new_view, preview, overview, index],
+        routes![
+            chat, chat_post, chat_sse, page, search, edit_save, new_save, edit_view, new_view,
+            preview, overview, index
+        ],
     )
 }
 

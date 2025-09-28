@@ -1,0 +1,50 @@
+{% extends "layout.html" %}
+
+{% block extra_scripts %}
+<script lang="javascript">
+    "use strict";
+    function start_chat() {
+        const messageDiv = document.getElementById("chat-messages");
+        const context = "{{context}}";
+        const prompt = document.querySelector("textarea[name='prompt']").value;
+        const url = `/chat-sse/{{context}}?prompt=${encodeURIComponent(prompt)}`;
+        const evtSource = new EventSource(url);
+        // evtSource.onmessage = (event) => {
+        //     messageDiv.innerHTML = event.data;
+        // };
+        evtSource.addEventListener("chat", (event) => {
+            messageDiv.innerHTML = event.data;
+        });
+        evtSource.addEventListener("done", (event) => {
+            evtSource.close();
+        });
+    }
+</script>
+{% endblock %}
+
+
+{% block title_block %}
+<h1 class="pt-4">
+    <span class="f1-light text-gray-light">AI Chat</span>
+</h1>
+{% endblock %}
+
+{% block content %}
+<form onsubmit="start_chat(); return false;">
+    <fieldset>
+        <legend>Ask a question</legend>
+        <div>
+            <textarea name="prompt" class="form-control input-block" rows="3"></textarea>
+        </div>
+        <div>
+            <button type="submit" class="btn btn-primary">Send</button>
+        </div>
+    </fieldset>
+</form>
+
+<h2>Chat Response</h2>
+<div id="chat-messages">
+    Chat response will appear here.
+</div>
+
+{% endblock %}

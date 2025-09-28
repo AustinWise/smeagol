@@ -32,13 +32,19 @@ struct LayoutTemplate<'a> {
     favicon_png_uri: String,
     title: String,
     breadcrumbs: Vec<Breadcrumb<'a>>,
+    chat_url: Option<&'a str>,
     overview_url: String,
     version: &'static str,
     short_sha: &'static str,
 }
 
 impl<'a> LayoutTemplate<'a> {
-    fn new(title: &'a str, overview_url: &'a str, breadcrumbs: Vec<Breadcrumb<'a>>) -> Self {
+    fn new_with_chat(
+        title: &'a str,
+        overview_url: &'a str,
+        breadcrumbs: Vec<Breadcrumb<'a>>,
+        chat_url: Option<&'a str>,
+    ) -> Self {
         let primer_css_uri = primer_css_uri();
         let favicon_png_uri = favicon_png_uri();
         Self {
@@ -46,10 +52,15 @@ impl<'a> LayoutTemplate<'a> {
             favicon_png_uri,
             primer_css_uri,
             overview_url: overview_url.to_owned(),
+            chat_url,
             title: title.to_owned(),
             version: VERSION,
             short_sha: SHORT_COMMIT,
         }
+    }
+
+    fn new(title: &'a str, overview_url: &'a str, breadcrumbs: Vec<Breadcrumb<'a>>) -> Self {
+        Self::new_with_chat(title, overview_url, breadcrumbs, None)
     }
 }
 
@@ -73,10 +84,11 @@ pub fn render_page(
     title: &str,
     edit_url: &str,
     overview_url: &str,
+    chat_url: Option<&str>,
     content: &str,
     breadcrumbs: Vec<Breadcrumb<'_>>,
 ) -> askama::Result<String> {
-    let layout = LayoutTemplate::new(title, overview_url, breadcrumbs);
+    let layout = LayoutTemplate::new_with_chat(title, overview_url, breadcrumbs, chat_url);
     let page = ViewPageTemplate {
         layout: &layout,
         edit_url,
@@ -194,10 +206,11 @@ impl<'a> Deref for OverviewTemplate<'a> {
 pub fn render_overview(
     title: &str,
     breadcrumbs: Vec<Breadcrumb<'_>>,
+    chat_url: Option<&str>,
     directories: Vec<DirectoryEntry<'_>>,
     files: Vec<DirectoryEntry<'_>>,
 ) -> askama::Result<String> {
-    let layout = LayoutTemplate::new(title, "/overview", breadcrumbs);
+    let layout = LayoutTemplate::new_with_chat(title, "/overview", breadcrumbs, chat_url);
     let file_svg = include_str!("../static/file.svg");
     let file_directory_svg = include_str!("../static/file_directory.svg");
     let template = OverviewTemplate {
@@ -242,6 +255,30 @@ pub fn render_search_results(
         documents,
         prev_url,
         next_url,
+    };
+    template.render()
+}
+
+#[derive(Template)]
+#[template(path = "chat.html")]
+struct ChatTemplate<'a> {
+    layout: &'a LayoutTemplate<'a>,
+    context: &'a str,
+}
+
+impl<'a> Deref for ChatTemplate<'a> {
+    type Target = LayoutTemplate<'a>;
+
+    fn deref(&self) -> &Self::Target {
+        self.layout
+    }
+}
+
+pub fn render_chat(breadcrumbs: Vec<Breadcrumb<'_>>, context: &str) -> askama::Result<String> {
+    let layout = LayoutTemplate::new("Chat", "/overview", breadcrumbs);
+    let template = ChatTemplate {
+        layout: &layout,
+        context,
     };
     template.render()
 }
