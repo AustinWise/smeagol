@@ -1,5 +1,7 @@
 use std::borrow::Cow;
 
+use ollama_rs::generation::completion::request::GenerationRequest;
+use ollama_rs::Ollama;
 use rocket::form::Form;
 use rocket::http::impl_from_uri_param_identity;
 use rocket::http::uri::fmt::Formatter;
@@ -14,10 +16,12 @@ use rocket::response::stream::Event;
 use rocket::response::stream::EventStream;
 use rocket::response::Responder;
 use rocket::{Build, Rocket};
+use tokio_stream::StreamExt;
 
 use crate::error::MyError;
 use crate::repository;
 use crate::repository::RepositoryCapability;
+use crate::repository::RepositoryItem;
 use crate::templates;
 use crate::templates::render_search_results;
 use crate::templates::{
@@ -429,11 +433,71 @@ fn chat_post() -> Result<(ContentType, String), MyError> {
     Ok((ContentType::HTML, html))
 }
 
+// TODO: remove unwraps
+fn create_prompt(prompt: &str, path: &WikiPagePath, w: &Wiki) -> Result<String, MyError> {
+    let context: String;
+    if let Ok(bytes) = w.read_file(&path.segments) {
+        context = format!(
+            "<file name=\"{}\">\n{}\n</file>",
+            path.to_path(),
+            std::str::from_utf8(&bytes)?
+        );
+    } else if let Ok(files) = w.enumerate_files(&path.segments) {
+        let files_names: Vec<_> = files
+            .iter()
+            .flat_map(|f| match f {
+                RepositoryItem::File(f) => Some(f),
+                RepositoryItem::Directory(_) => None,
+            })
+            .filter(|f| f.ends_with(".md"))
+            .map(|f| path.append_segment(f))
+            .collect();
+        let file_contents: Vec<_> = files_names
+            .iter()
+            .map(|f| w.read_file(&f.segments).unwrap())
+            .collect();
+        let file_prompts: Vec<_> = file_contents
+            .into_iter()
+            .zip(files_names)
+            .map(|(content, file_path)| {
+                format!(
+                    "<file name=\"{}\">\n{}\n</file>",
+                    file_path.to_path(),
+                    std::str::from_utf8(&content).unwrap()
+                )
+            })
+            .collect();
+        context = file_prompts.join("\n");
+    } else {
+        return Err(MyError::InvalidPath);
+    }
+    Ok(format!("{}\n\nThe above is the contents of some files. What follows is the user's prompt.\n\n<prompt>\n{}\n</prompt>", context, prompt))
+}
+
+// TODO: remove unwraps
 #[get("/chat-sse/<path..>?<prompt>")]
-fn chat_sse(path: WikiPagePath, prompt: &str) -> EventStream![] {
+fn chat_sse(path: WikiPagePath, prompt: &str, w: Wiki) -> EventStream![] {
+    let prompt = create_prompt(prompt, &path, &w).unwrap();
     EventStream! {
-            yield Event::data("ping ").event("chat");
-            yield Event::data("pong ").event("done");
+        let ollama = Ollama::default();
+        // TODO: load model name from settings.
+        let model = "mistral:latest".to_string();
+        let mut stream = ollama
+            .generate_stream(GenerationRequest::new(model, prompt))
+            .await
+            .unwrap();
+        let mut markdown = String::new();
+        while let Some(res) = stream.next().await {
+            for gen_response in res.unwrap() {
+                markdown += &gen_response.response;
+            }
+            let parser = pulldown_cmark::Parser::new(&markdown);
+            // TODO: somehow send a DOM diff instead of the entire HTML blob.
+            let mut html_output = String::new();
+            pulldown_cmark::html::push_html(&mut html_output, parser);
+            yield Event::data(html_output).event("chat");
+        }
+        yield Event::data("done").event("done");
     }
 }
 
