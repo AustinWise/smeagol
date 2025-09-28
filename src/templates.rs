@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use askama::Template;
 
 use crate::assets::favicon_png_uri;
@@ -23,17 +25,48 @@ impl<'a> Breadcrumb<'a> {
 }
 
 #[derive(Template)]
+#[template(path = "layout.html")]
+struct LayoutTemplate<'a> {
+    // TODO: reduce copying here
+    primer_css_uri: String,
+    favicon_png_uri: String,
+    title: String,
+    breadcrumbs: Vec<Breadcrumb<'a>>,
+    overview_url: String,
+    version: &'static str,
+    short_sha: &'static str,
+}
+
+impl<'a> LayoutTemplate<'a> {
+    fn new(title: &'a str, overview_url: &'a str, breadcrumbs: Vec<Breadcrumb<'a>>) -> Self {
+        let primer_css_uri = primer_css_uri();
+        let favicon_png_uri = favicon_png_uri();
+        Self {
+            breadcrumbs,
+            favicon_png_uri,
+            primer_css_uri,
+            overview_url: overview_url.to_owned(),
+            title: title.to_owned(),
+            version: VERSION,
+            short_sha: SHORT_COMMIT,
+        }
+    }
+}
+
+#[derive(Template)]
 #[template(path = "view_page.html", escape = "none")]
 struct ViewPageTemplate<'a> {
-    primer_css_uri: &'a str,
-    favicon_png_uri: &'a str,
-    title: &'a str,
+    layout: &'a LayoutTemplate<'a>,
     edit_url: &'a str,
-    overview_url: &'a str,
     content: &'a str,
-    breadcrumbs: Vec<Breadcrumb<'a>>,
-    version: &'a str,
-    short_sha: &'a str,
+}
+
+impl<'a> Deref for ViewPageTemplate<'a> {
+    type Target = LayoutTemplate<'a>;
+
+    fn deref(&self) -> &Self::Target {
+        self.layout
+    }
 }
 
 pub fn render_page(
@@ -43,35 +76,29 @@ pub fn render_page(
     content: &str,
     breadcrumbs: Vec<Breadcrumb<'_>>,
 ) -> askama::Result<String> {
-    let primer_css_uri = &primer_css_uri();
-    let favicon_png_uri = &favicon_png_uri();
+    let layout = LayoutTemplate::new(title, overview_url, breadcrumbs);
     let page = ViewPageTemplate {
-        primer_css_uri,
-        favicon_png_uri,
-        title,
+        layout: &layout,
         edit_url,
-        overview_url,
         content,
-        breadcrumbs,
-        version: VERSION,
-        short_sha: SHORT_COMMIT,
     };
-    // TODO: render into a stream directly instead of crating this String.
     page.render()
 }
 
 #[derive(Template)]
 #[template(path = "page_placeholder.html")]
 struct PagePlaceholderTemplate<'a> {
-    primer_css_uri: &'a str,
-    favicon_png_uri: &'a str,
-    title: &'a str,
+    layout: &'a LayoutTemplate<'a>,
     file_path: &'a str,
     create_url: &'a str,
-    overview_url: &'a str,
-    breadcrumbs: Vec<Breadcrumb<'a>>,
-    version: &'a str,
-    short_sha: &'a str,
+}
+
+impl<'a> Deref for PagePlaceholderTemplate<'a> {
+    type Target = LayoutTemplate<'a>;
+
+    fn deref(&self) -> &Self::Target {
+        self.layout
+    }
 }
 
 pub fn render_page_placeholder(
@@ -81,18 +108,11 @@ pub fn render_page_placeholder(
     overview_url: &str,
     breadcrumbs: Vec<Breadcrumb<'_>>,
 ) -> askama::Result<String> {
-    let primer_css_uri = &primer_css_uri();
-    let favicon_png_uri = &favicon_png_uri();
+    let layout = LayoutTemplate::new(title, overview_url, breadcrumbs);
     let template = PagePlaceholderTemplate {
-        primer_css_uri,
-        favicon_png_uri,
-        title,
+        layout: &layout,
         file_path,
         create_url,
-        overview_url,
-        breadcrumbs,
-        version: VERSION,
-        short_sha: SHORT_COMMIT,
     };
     template.render()
 }
@@ -101,19 +121,21 @@ pub fn render_page_placeholder(
 #[derive(Template)]
 #[template(path = "edit_page.html")]
 struct EditTemplate<'a> {
-    primer_css_uri: &'a str,
-    favicon_png_uri: &'a str,
-    title: &'a str,
+    layout: &'a LayoutTemplate<'a>,
     post_url: &'a str,
     view_url: &'a str,
     preview_url: &'a str,
-    overview_url: &'a str,
     message_placeholder: Option<String>,
     content: &'a str,
-    breadcrumbs: Vec<Breadcrumb<'a>>,
     authenticity_token: &'a str,
-    version: &'a str,
-    short_sha: &'a str,
+}
+
+impl<'a> Deref for EditTemplate<'a> {
+    type Target = LayoutTemplate<'a>;
+
+    fn deref(&self) -> &Self::Target {
+        self.layout
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -127,22 +149,15 @@ pub fn render_edit_page(
     breadcrumbs: Vec<Breadcrumb<'_>>,
     authenticity_token: &str,
 ) -> askama::Result<String> {
-    let primer_css_uri = &primer_css_uri();
-    let favicon_png_uri = &favicon_png_uri();
+    let layout = LayoutTemplate::new(title, "/overview", breadcrumbs);
     let template = EditTemplate {
-        primer_css_uri,
-        favicon_png_uri,
-        title,
+        layout: &layout,
         post_url,
         view_url,
         preview_url,
-        overview_url: "/overview",
         message_placeholder,
         content,
-        breadcrumbs,
         authenticity_token,
-        version: VERSION,
-        short_sha: SHORT_COMMIT,
     };
     template.render()
 }
@@ -161,17 +176,19 @@ impl<'a> DirectoryEntry<'a> {
 #[derive(Template)]
 #[template(path = "overview.html", escape = "none")]
 struct OverviewTemplate<'a> {
-    primer_css_uri: &'a str,
-    favicon_png_uri: &'a str,
+    layout: &'a LayoutTemplate<'a>,
     file_svg: &'a str,
     file_directory_svg: &'a str,
-    title: &'a str,
-    breadcrumbs: Vec<Breadcrumb<'a>>,
     directories: Vec<DirectoryEntry<'a>>,
     files: Vec<DirectoryEntry<'a>>,
-    overview_url: &'a str,
-    version: &'a str,
-    short_sha: &'a str,
+}
+
+impl<'a> Deref for OverviewTemplate<'a> {
+    type Target = LayoutTemplate<'a>;
+
+    fn deref(&self) -> &Self::Target {
+        self.layout
+    }
 }
 
 pub fn render_overview(
@@ -180,22 +197,15 @@ pub fn render_overview(
     directories: Vec<DirectoryEntry<'_>>,
     files: Vec<DirectoryEntry<'_>>,
 ) -> askama::Result<String> {
-    let primer_css_uri = &primer_css_uri();
-    let favicon_png_uri = &favicon_png_uri();
+    let layout = LayoutTemplate::new(title, "/overview", breadcrumbs);
     let file_svg = include_str!("../static/file.svg");
     let file_directory_svg = include_str!("../static/file_directory.svg");
     let template = OverviewTemplate {
-        primer_css_uri,
-        favicon_png_uri,
+        layout: &layout,
         file_svg,
         file_directory_svg,
-        title,
-        breadcrumbs,
         directories,
         files,
-        overview_url: "/overview",
-        version: VERSION,
-        short_sha: SHORT_COMMIT,
     };
     template.render()
 }
@@ -203,17 +213,19 @@ pub fn render_overview(
 #[derive(Template)]
 #[template(path = "search_results.html", escape = "none")]
 struct SearchResultsTemplate<'a> {
-    primer_css_uri: &'a str,
-    favicon_png_uri: &'a str,
-    title: &'a str,
+    layout: &'a LayoutTemplate<'a>,
     query: &'a str,
     documents: Vec<SearchResult>,
-    breadcrumbs: Vec<Breadcrumb<'a>>,
     prev_url: Option<String>,
     next_url: Option<String>,
-    overview_url: &'a str,
-    version: &'a str,
-    short_sha: &'a str,
+}
+
+impl<'a> Deref for SearchResultsTemplate<'a> {
+    type Target = LayoutTemplate<'a>;
+
+    fn deref(&self) -> &Self::Target {
+        self.layout
+    }
 }
 
 pub fn render_search_results(
@@ -222,21 +234,14 @@ pub fn render_search_results(
     prev_url: Option<String>,
     next_url: Option<String>,
 ) -> askama::Result<String> {
-    let primer_css_uri = &primer_css_uri();
-    let favicon_png_uri = &favicon_png_uri();
     let breadcrumbs = vec![];
+    let layout = LayoutTemplate::new("Search results", "/overview", breadcrumbs);
     let template = SearchResultsTemplate {
-        primer_css_uri,
-        favicon_png_uri,
-        title: "Search results",
+        layout: &layout,
         query,
-        breadcrumbs,
         documents,
         prev_url,
         next_url,
-        overview_url: "/overview",
-        version: VERSION,
-        short_sha: SHORT_COMMIT,
     };
     template.render()
 }
