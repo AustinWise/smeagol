@@ -11,6 +11,7 @@ use rocket::http::ContentType;
 use rocket::request::FromSegments;
 use rocket::response;
 use rocket::response::Responder;
+use rocket::State;
 use rocket::{Build, Rocket};
 
 use crate::error::MyError;
@@ -186,7 +187,7 @@ struct PageEditForm<'r> {
 fn edit_save_inner(
     path: WikiPagePath,
     content: Form<PageEditForm<'_>>,
-    w: Wiki,
+    w: &State<Wiki>,
     as_create: bool,
 ) -> Result<response::Redirect, MyError> {
     if content.authenticity_token != *CSRF_TOKEN {
@@ -210,7 +211,7 @@ fn edit_save_inner(
 fn edit_save(
     path: WikiPagePath,
     content: Form<PageEditForm<'_>>,
-    w: Wiki,
+    w: &State<Wiki>,
 ) -> Result<response::Redirect, MyError> {
     edit_save_inner(path, content, w, false)
 }
@@ -219,7 +220,7 @@ fn edit_save(
 fn new_save(
     path: WikiPagePath,
     content: Form<PageEditForm<'_>>,
-    w: Wiki,
+    w: &State<Wiki>,
 ) -> Result<response::Redirect, MyError> {
     edit_save_inner(path, content, w, true)
 }
@@ -234,7 +235,7 @@ fn default_new_message(path: &WikiPagePath) -> String {
 
 fn edit_view_inner(
     path: WikiPagePath,
-    w: Wiki,
+    w: &State<Wiki>,
     as_create: bool,
 ) -> Result<(ContentType, String), MyError> {
     let content = w.read_file(&path.segments).unwrap_or_else(|_| vec![]);
@@ -269,12 +270,12 @@ fn edit_view_inner(
 }
 
 #[get("/edit/<path..>")]
-fn edit_view(path: WikiPagePath, w: Wiki) -> Result<(ContentType, String), MyError> {
+fn edit_view(path: WikiPagePath, w: &State<Wiki>) -> Result<(ContentType, String), MyError> {
     edit_view_inner(path, w, false)
 }
 
 #[get("/new/<path..>")]
-fn new_view(path: WikiPagePath, w: Wiki) -> Result<(ContentType, String), MyError> {
+fn new_view(path: WikiPagePath, w: &State<Wiki>) -> Result<(ContentType, String), MyError> {
     edit_view_inner(path, w, true)
 }
 
@@ -294,7 +295,7 @@ fn page_response(
     Ok((ContentType::HTML, html))
 }
 
-fn page_inner(path: WikiPagePath, w: Wiki) -> Result<WikiPageResponder, MyError> {
+fn page_inner(path: WikiPagePath, w: &State<Wiki>) -> Result<WikiPageResponder, MyError> {
     match w.read_file(&path.segments) {
         Ok(bytes) => {
             let file_info = path.file_stem_and_extension();
@@ -355,11 +356,11 @@ fn page_inner(path: WikiPagePath, w: Wiki) -> Result<WikiPageResponder, MyError>
 }
 
 #[get("/page/<path..>")]
-fn page(path: WikiPagePath, w: Wiki) -> Result<WikiPageResponder, MyError> {
+fn page(path: WikiPagePath, w: &State<Wiki>) -> Result<WikiPageResponder, MyError> {
     page_inner(path, w)
 }
 
-fn overview_inner(path: WikiPagePath, w: Wiki) -> Result<(ContentType, String), MyError> {
+fn overview_inner(path: WikiPagePath, w: &State<Wiki>) -> Result<(ContentType, String), MyError> {
     let mut entries = w.enumerate_files(&path.segments)?;
     entries.sort();
     let entries = entries;
@@ -391,11 +392,15 @@ fn overview_inner(path: WikiPagePath, w: Wiki) -> Result<(ContentType, String), 
 }
 
 #[get("/overview/<path..>")]
-fn overview(path: WikiPagePath, w: Wiki) -> Result<(ContentType, String), MyError> {
+fn overview(path: WikiPagePath, w: &State<Wiki>) -> Result<(ContentType, String), MyError> {
     overview_inner(path, w)
 }
 
-fn search_inner(q: &str, offset: Option<usize>, w: Wiki) -> Result<(ContentType, String), MyError> {
+fn search_inner(
+    q: &str,
+    offset: Option<usize>,
+    w: &State<Wiki>,
+) -> Result<(ContentType, String), MyError> {
     const RESULTS_PER_PAGE: usize = 10;
     let results = w.search(q, RESULTS_PER_PAGE, offset)?;
     let prev_url = offset.and_then(|v| {
@@ -411,14 +416,18 @@ fn search_inner(q: &str, offset: Option<usize>, w: Wiki) -> Result<(ContentType,
 }
 
 #[get("/search?<q>&<offset>")]
-fn search(q: &str, offset: Option<usize>, w: Wiki) -> Result<(ContentType, String), MyError> {
+fn search(
+    q: &str,
+    offset: Option<usize>,
+    w: &State<Wiki>,
+) -> Result<(ContentType, String), MyError> {
     search_inner(q, offset, w)
 }
 
 fn preview_inner(
     path: WikiPagePath,
     content: &str,
-    w: Wiki,
+    w: &State<Wiki>,
 ) -> Result<(ContentType, String), MyError> {
     let (file_stem, file_extension) = path.file_stem_and_extension().unwrap();
     let page = crate::page::get_page(file_stem, file_extension, content.as_bytes(), w.settings())?;
@@ -428,12 +437,16 @@ fn preview_inner(
 
 // TODO: add CSRF token
 #[post("/preview/<path..>", data = "<content>")]
-fn preview(path: WikiPagePath, content: &str, w: Wiki) -> Result<(ContentType, String), MyError> {
+fn preview(
+    path: WikiPagePath,
+    content: &str,
+    w: &State<Wiki>,
+) -> Result<(ContentType, String), MyError> {
     preview_inner(path, content, w)
 }
 
 #[get("/")]
-fn index(w: Wiki) -> response::Redirect {
+fn index(w: &State<Wiki>) -> response::Redirect {
     let file_name = format!("{}.md", w.settings().index_page());
     let path = WikiPagePath::new(vec![&file_name]);
     response::Redirect::to(uri!(page(path)))

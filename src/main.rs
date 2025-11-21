@@ -19,11 +19,6 @@ use repository::create_repository;
 use settings::parse_settings_from_args;
 use wiki::Wiki;
 
-use once_cell::sync::OnceCell;
-use rocket::request::{FromRequest, Outcome, Request};
-
-static WIKI: OnceCell<Wiki> = OnceCell::new();
-
 fn create_wiki() -> Result<Wiki, MyError> {
     let args = settings::Args::parse();
     let git_repo = args
@@ -37,15 +32,6 @@ fn create_wiki() -> Result<Wiki, MyError> {
     Wiki::new(settings, repo)
 }
 
-#[rocket::async_trait]
-impl<'r> FromRequest<'r> for Wiki {
-    type Error = MyError;
-
-    async fn from_request(_req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-        Outcome::Success(WIKI.get().unwrap().clone())
-    }
-}
-
 #[rocket::main]
 async fn main() -> Result<(), rocket::Error> {
     let wiki = match create_wiki() {
@@ -55,17 +41,16 @@ async fn main() -> Result<(), rocket::Error> {
             std::process::exit(1);
         }
     };
-    WIKI.set(wiki).expect("Failed to set global wiki pointer.");
-
     println!("Wiki loaded");
 
-    let address = WIKI.get().unwrap().settings().host();
-    let port = WIKI.get().unwrap().settings().port();
+    let address = wiki.settings().host();
+    let port = wiki.settings().port();
 
     let figment = rocket::Config::figment()
         .merge(("port", port))
         .merge(("address", address));
     let rocket = rocket::custom(figment);
+    let rocket = rocket.manage(wiki);
     let rocket = requests::mount_routes(rocket);
     let rocket = assets::mount_routes(rocket);
     let rocket = rocket.ignite().await?;

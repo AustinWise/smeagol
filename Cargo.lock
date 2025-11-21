@@ -2039,7 +2039,6 @@ dependencies = [
  "git2",
  "lazy_static",
  "log",
- "once_cell",
  "pretty_env_logger",
  "pulldown-cmark",
  "rand",

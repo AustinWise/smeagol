@@ -25,7 +25,6 @@ const_format = "0.2.34"
 git2 = { version = "0.20", default-features = false }
 lazy_static = "1.5.0"
 log = "0.4"
-once_cell = "1.20"
 pretty_env_logger = "0.5"
 pulldown-cmark = { version = "0.12", features = ["html"] }
 rand = "0.8.5"
