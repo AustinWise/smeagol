@@ -34,6 +34,13 @@ serde = { version = "1.0", features = ["derive"] }
 shadow-rs = { version = "1.6", default-features = false }
 strum = "0.27"
 strum_macros = "0.27"
-tantivy = "0.25"
 thiserror = "2.0"
 toml = "0.9"
+
+[dependencies.tantivy]
+version = "0.25.0"
+# Disable default feature "lz4-compression" and use "zstd-compression", since we were already using
+# zstd from the columnar feature anyways. We probably don't need compression of any kind, but it's
+# not clear to me how much Tantivy needs it to operate correctly.
+default-features = false
+features = ["mmap", "stopwords", "zstd-compression", "columnar-zstd-compression"]
