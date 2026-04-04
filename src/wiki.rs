@@ -10,9 +10,11 @@ use tantivy::query::QueryParser;
 use tantivy::schema::*;
 use tantivy::snippet::Snippet;
 use tantivy::snippet::SnippetGenerator;
+use tantivy::DocAddress;
 use tantivy::Index;
 use tantivy::IndexWriter;
 use tantivy::ReloadPolicy;
+use tantivy::Score;
 
 use crate::error::MyError;
 use crate::page::get_raw_page;
@@ -300,7 +302,8 @@ impl Wiki {
         if let Some(offset) = offset {
             top_docs = top_docs.and_offset(offset);
         }
-        let top_docs = searcher.search(&query, &top_docs)?;
+        let top_docs: Vec<(Score, DocAddress)> =
+            searcher.search(&query, &top_docs.order_by_score())?;
 
         let snippet_generator = SnippetGenerator::create(&searcher, &*query, fields.body)?;
 

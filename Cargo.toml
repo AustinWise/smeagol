@@ -38,9 +38,9 @@ thiserror = "2.0"
 toml = "0.9"
 
 [dependencies.tantivy]
-version = "0.25.0"
+version = "0.26.0"
 # Disable default feature "lz4-compression" and use "zstd-compression", since we were already using
 # zstd from the columnar feature anyways. We probably don't need compression of any kind, but it's
 # not clear to me how much Tantivy needs it to operate correctly.
 default-features = false
-features = ["mmap", "stopwords", "zstd-compression", "columnar-zstd-compression"]
+features = ["mmap", "stopwords", "zstd-compression", "columnar-zstd-compression", "stemmer"]
