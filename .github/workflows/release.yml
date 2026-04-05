@@ -161,6 +161,7 @@ jobs:
         with:
           path: ${{ steps.create-temp-dir.outputs.dir }}
           merge-multiple: true
+          skip-decompress: true
 
       - name: List artifacts
         run: ls -l $HOME/artifacts
