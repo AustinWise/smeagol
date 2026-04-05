@@ -1,5 +1,6 @@
 
 name: ci
+permissions: {}
 on:
   pull_request:
   push:
@@ -31,13 +32,13 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     # See: https://github.com/actions/cache/blob/main/examples.md#rust---cargo
     # And also https://github.com/rust-lang/rustup/blob/25dc87dc605adc0843c9369063333997ae806008/.github/workflows/linux-builds-on-stable.yaml#L81
     - name: Cache cargo registry and git trees
       id: do-cache-cargo
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           ~/.cargo/registry
@@ -50,7 +51,7 @@ jobs:
       shell: bash
     - name: Cache cargo build
       id: do-cache-target
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: target
         key: ${{ matrix.target }}-cargo-target-dir-${{ steps.cargo-target-cache.outputs.rust_hash }}-${{ hashFiles('**/Cargo.lock') }}
