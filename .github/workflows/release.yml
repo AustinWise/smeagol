@@ -95,7 +95,7 @@ jobs:
           "$HOME/cross/cross" build --release --target ${{ matrix.target }}
 
       - name: Build with Cargo
-        if: ! matrix.use-cross
+        if: '!matrix.use-cross'
         run: |
           rustup target add ${{ matrix.target }}
           cargo build --release --target ${{ matrix.target }}
