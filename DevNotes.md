@@ -33,6 +33,7 @@ Perform the following steps:
     * thing 3
     ```
 1. `git push origin x.x.x`
+1. Once the GitHub workflow publishes successfully, publish the draft release using the web interface.
 1. `cargo publish`
 1. Edit `Cargo.toml` and `Changelog.md` with a new version number
 1. `cargo build` to ensure `Cargo.lock` is also updated
