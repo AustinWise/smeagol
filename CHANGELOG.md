@@ -1,5 +1,12 @@
-WIP
-===
+0.5.1
+=====
+
+* Link to commit of Smeagol at the bottom of the page.
+
+Non user visible changes:
+
+* Use template inheritance to handle layout.html template parameters.
+* Update deps.
 
 0.5.0
 =====
