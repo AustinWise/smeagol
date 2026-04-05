@@ -44,27 +44,27 @@ jobs:
             use-cross: true
           - build: macos-x64
             os: macos
-            image: macos-15
+            image: macos-26
             target: x86_64-apple-darwin
             use-cross: false
           - build: macos-arm64
             os: macos
-            image: macos-15
+            image: macos-26
             target: aarch64-apple-darwin
             use-cross: false
           - build: win-x64-msvc
             os: windows
-            image: windows-2022
+            image: windows-2025
             target: x86_64-pc-windows-msvc
             use-cross: false
           - build: win-x86-msvc
             os: windows
-            image: windows-2022
+            image: windows-2025
             target: i686-pc-windows-msvc
             use-cross: false
           - build: win-arm64-msvc
             os: windows
-            image: windows-2022
+            image: windows-2025
             target: aarch64-pc-windows-msvc
             use-cross: false
 
@@ -116,7 +116,7 @@ jobs:
           if [ "${{ matrix.os }}" = "windows" ]; then
             cp "target/${{ matrix.target }}/release/${PROGRAM_NAME}.exe" "$staging/"
             7z a "$staging.zip" "$staging"
-            shasum -a 512 "$staging.zip" > "$staging.zip.sha512"
+            certutil -hashfile "$staging.zip" SHA512 > "$staging.zip.sha512"
             echo "ASSET=$staging.zip" >> $GITHUB_ENV
           else
             cp "target/${{ matrix.target }}/release/${PROGRAM_NAME}" "$staging/"
