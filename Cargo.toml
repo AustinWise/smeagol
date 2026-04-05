@@ -13,11 +13,6 @@ exclude = ["/frontend", "/site"]
 [profile.release]
 strip = "symbols"
 
-# The profile that 'dist' will build with
-[profile.dist]
-inherits = "release"
-lto = "thin"
-
 [build-dependencies]
 ring = "0.17"
 shadow-rs = "1.1.1"
