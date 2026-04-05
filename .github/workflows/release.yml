@@ -7,6 +7,9 @@
 # https://eugene-babichenko.github.io/blog/2020/05/09/github-actions-cross-platform-auto-releases/
 
 name: release
+env:
+  # The name of the program executable.
+  PROGRAM_NAME: smeagol-wiki
 on:
   push:
     # Enable when testing release infrastructure on a branch.
@@ -18,44 +21,13 @@ on:
       - "[0-9]+.[0-9]+.[0-9]+"
       - "[0-9]+.[0-9]+.[0-9]+-*" # prerelease
 jobs:
-  create-release:
-    runs-on: ubuntu-24.04
-    outputs:
-      id: ${{ steps.release.outputs.id }}
-      upload_url: ${{ steps.release.outputs.upload_url }}
-    env:
-      RELEASE_BODY_FILE_NAME: __release_body_file_dont_commit__.md
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Create release body file
-        shell: bash
-        run: |
-          if [ "${{ github.ref_type }}" = "tag" ]; then
-            git tag -l ${{ github.ref }} --format='%(contents)' > $RELEASE_BODY_FILE_NAME
-          else
-            echo "test release, please ignore" > $RELEASE_BODY_FILE_NAME
-          fi
-      - name: Create GitHub release
-        id: release
-        uses: actions/create-release@v1.1.4
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref_name }}
-          release_name: ${{ github.ref_name }}
-          draft: true
-          body_path: ${{ env.RELEASE_BODY_FILE_NAME }}
-          prerelease: ${{ contains(github.ref_name, '-') }}
 
   build-release:
-    needs: ["create-release"]
+    permissions: {}
     runs-on: ${{ matrix.image }}
     env:
       # Emit backtraces on panics.
       RUST_BACKTRACE: 1
-      # The name of the program executable.
-      PROGRAM_NAME: smeagol-wiki
     strategy:
       matrix:
         include:
@@ -104,7 +76,7 @@ jobs:
 
       # NOTE NOTE NOTE NOTE NOTE NOTE
       #
-      # See .cargo/config.toml for an explination of these settings.
+      # See .cargo/config.toml for an explanation of these settings.
       # Keep these settings and that file in sync.
       #
       # NOTE NOTE NOTE NOTE NOTE NOTE
@@ -115,21 +87,22 @@ jobs:
           echo "RUSTFLAGS=-C target-feature=+crt-static -C link-arg=/DEPENDENTLOADFLAG:0x800" >> $GITHUB_ENV
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-          target: ${{ matrix.target }}
-          profile: minimal
+      - name: Build with Cross
+        if: matrix.use-cross
+        run: |
+          mkdir "$HOME/cross"
+          curl -o "$HOME/cross/cross.tar.gz" -sSL "https://github.com/cross-rs/cross/releases/download/v0.2.5/cross-x86_64-unknown-linux-gnu.tar.gz"
+          echo "536cf0ced0bf97a747ae2dae3f625bd243f277fc61298d91c80b8ee04e2f8f6303028d61324964b33e666311424bc199708153236ab59e9d99ee550408cc6df0  $HOME/cross/cross.tar.gz" | shasum -a 512 --strict -c -
+          tar -C "$HOME/cross" -xzf "$HOME/cross/cross.tar.gz"
+          "$HOME/cross/cross" build --release --target ${{ matrix.target }}
 
-      - uses: actions-rs/cargo@v1
-        with:
-          use-cross: ${{ matrix.use-cross }}
-          command: build
-          args: --release --target ${{ matrix.target }}
+      - name: Build with Cargo
+        if: ! matrix.use-cross
+        run: |
+          rustup target add ${{ matrix.target }}
+          cargo build --release --target ${{ matrix.target }}
 
       - name: Strip release binary (macos)
         if: matrix.os == 'macos'
@@ -154,28 +127,43 @@ jobs:
             echo "ASSET=$staging.tar.gz" >> $GITHUB_ENV
           fi
 
-      - name: Upload release archive
-        uses: actions/upload-release-asset@v1.0.2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload Output
+        uses: actions/upload-artifact@v7
         with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ${{ env.ASSET }}
-          asset_name: ${{ env.ASSET }}
-          asset_content_type: application/octet-stream
+          retention-days: 7
+          if-no-files-found: error
+          archive: false
+          path: ${{ env.ASSET }}
 
   publish-release:
-    if: github.ref_type == 'tag'
-    needs: ["create-release", "build-release"]
+    permissions:
+      contents: write
+    needs: ["build-release"]
     runs-on: ubuntu-24.04
     steps:
-      - name: Publish release, by setting draft to false
-        shell: bash
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Create temp directory
+        id: create-temp-dir
         run: |
-          curl \
-            -Ssf \
-            -X PATCH \
-            -H "Accept: application/vnd.github.v3+json" \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/${{ github.repository }}/releases/${{ needs.create-release.outputs.id }}" \
-            -d '{"draft":false}'
+          mkdir "$HOME/artifacts"
+          echo "dir=$HOME/artifacts" >> $GITHUB_OUTPUT
+
+      - name: Download built programs and symbols
+        uses: actions/download-artifact@v8
+        with:
+          path: ${{ steps.create-temp-dir.outputs.dir }}
+
+      - name: List artifacts
+        run: ls -l $HOME/artifacts
+
+      - name: Create release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create ${{ github.ref_name }} --draft --notes-from-tag --verify-tag \
+            ${{ contains(github.ref_name, '-') && '--prerelease' || '' }} \
+            $HOME/artifacts/*.tar.gz \
+            $HOME/artifacts/*.zip
