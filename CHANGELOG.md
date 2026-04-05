@@ -7,6 +7,7 @@ Non user visible changes:
 
 * Use template inheritance to handle layout.html template parameters.
 * Update deps.
+* Update release CI process.
 
 0.5.0
 =====

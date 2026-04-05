@@ -1,10 +1,6 @@
-# Creates a GitHub release, builds the program for multiple targets, then
-# uploads the build assets to the GitHub release. Uses the body of the
+# Builds the program for multiple targets and then creates a GitHub release containing
+# the resulting files. This uses the body of the
 # annotated tag (git tag -a) to populate the body of the release.
-#
-# Based on the following:
-# https://github.com/BurntSushi/ripgrep/blob/df83b8b44426b3f2179abe632eb183e8c8270524/.github/workflows/release.yml
-# https://eugene-babichenko.github.io/blog/2020/05/09/github-actions-cross-platform-auto-releases/
 
 name: release
 env:
@@ -120,10 +116,12 @@ jobs:
           if [ "${{ matrix.os }}" = "windows" ]; then
             cp "target/${{ matrix.target }}/release/${PROGRAM_NAME}.exe" "$staging/"
             7z a "$staging.zip" "$staging"
+            shasum -a 512 "$staging.zip" > "$staging.zip.sha512"
             echo "ASSET=$staging.zip" >> $GITHUB_ENV
           else
             cp "target/${{ matrix.target }}/release/${PROGRAM_NAME}" "$staging/"
             tar czf "$staging.tar.gz" "$staging"
+            shasum -a 512 "$staging.tar.gz" > "$staging.tar.gz.sha512"
             echo "ASSET=$staging.tar.gz" >> $GITHUB_ENV
           fi
 
@@ -134,6 +132,14 @@ jobs:
           if-no-files-found: error
           archive: false
           path: ${{ env.ASSET }}
+
+      - name: Upload Output
+        uses: actions/upload-artifact@v7
+        with:
+          retention-days: 7
+          if-no-files-found: error
+          archive: false
+          path: ${{ env.ASSET }}.sha512
 
   publish-release:
     permissions:
@@ -165,5 +171,4 @@ jobs:
         run: |
           gh release create ${{ github.ref_name }} --draft --notes-from-tag --verify-tag \
             ${{ contains(github.ref_name, '-') && '--prerelease' || '' }} \
-            $HOME/artifacts/*.tar.gz \
-            $HOME/artifacts/*.zip
+            $HOME/artifacts/*
