@@ -7,13 +7,17 @@
         const messageDiv = document.getElementById("chat-messages");
         const context = "{{context}}";
         const prompt = document.querySelector("textarea[name='prompt']").value;
-        const url = `/chat-sse/{{context}}?prompt=${encodeURIComponent(prompt)}`;
+        const url = `/chat-sse/${context}?prompt=${encodeURIComponent(prompt)}`;
         const evtSource = new EventSource(url);
-        // evtSource.onmessage = (event) => {
-        //     messageDiv.innerHTML = event.data;
-        // };
         evtSource.addEventListener("chat", (event) => {
+          if (messageDiv.setHTML) {
+            // Sanitizes HTML
+            messageDiv.setHTML(event.data);
+          } else {
+            // Fallback for browsers that don't support setHTML,
+            // which as of 2026 includes Safari.
             messageDiv.innerHTML = event.data;
+          }
         });
         evtSource.addEventListener("done", (event) => {
             evtSource.close();
