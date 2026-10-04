@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::sync::LazyLock;
 
 use rocket::form::Form;
 use rocket::http::impl_from_uri_param_identity;
@@ -170,12 +171,10 @@ impl<'r, 'o: 'r> Responder<'r, 'o> for MyError {
 // Ideally this would include some sort of expiration for the tokens.
 // Though this might be good enough, because I expect in typical use the wiki
 // server is shut down periodically, essentially expiring the tokens.
-lazy_static! {
-    static ref CSRF_TOKEN: String = {
-        let bytes = rand::random::<[u8; 32]>();
-        bytes.map(|b| format!("{:02x}", b)).concat()
-    };
-}
+static CSRF_TOKEN: LazyLock<String> = LazyLock::new(|| {
+    let bytes = rand::random::<[u8; 32]>();
+    bytes.map(|b| format!("{:02x}", b)).concat()
+});
 
 #[derive(FromForm)]
 struct PageEditForm<'r> {
