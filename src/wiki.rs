@@ -1,7 +1,6 @@
 use std::str;
 use std::sync::Arc;
-
-use lazy_static::lazy_static;
+use std::sync::LazyLock;
 
 use regex::bytes::{Captures, Regex, RegexBuilder};
 
@@ -217,12 +216,12 @@ impl Wiki {
     }
 
     pub fn read_file(&self, file_path: &[&str]) -> Result<Vec<u8>, MyError> {
-        lazy_static! {
-            static ref RE: Regex = RegexBuilder::new(r"^\{\{(.+?)\}\}$")
+        static RE: LazyLock<Regex> = LazyLock::new(|| {
+            RegexBuilder::new(r"^\{\{(.+?)\}\}$")
                 .multi_line(true)
                 .build()
-                .unwrap();
-        }
+                .unwrap()
+        });
         let mut res = self.0.repository.read_file(file_path);
         if let Ok(mut bytes) = res {
             while RE.is_match(&bytes) {

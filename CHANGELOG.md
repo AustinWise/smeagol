@@ -1,6 +1,10 @@
 WIP
 ===
 
+Non user visible changes:
+
+* Update deps.
+
 0.5.1
 =====
 

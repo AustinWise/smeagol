@@ -233,7 +233,14 @@ impl Repository for GitRepository {
         let tree = index.write_tree()?;
         let tree = repo.find_tree(tree)?;
 
-        repo.commit(head.name(), &sig, &sig, message, &tree, &[&head_commit])?;
+        repo.commit(
+            Some(head.name()?),
+            &sig,
+            &sig,
+            message,
+            &tree,
+            &[&head_commit],
+        )?;
 
         Ok(())
     }
