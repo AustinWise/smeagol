@@ -4,11 +4,16 @@
 <script lang="javascript">
     "use strict";
     function start_chat() {
+        const submitButton = document.getElementById("submit-chat");
         const messageDiv = document.getElementById("chat-messages");
+        const loadingMessage = document.getElementById("loading-message");
         const context = "{{context}}";
         const prompt = document.querySelector("textarea[name='prompt']").value;
         const url = `/chat-sse/${context}?prompt=${encodeURIComponent(prompt)}`;
         const evtSource = new EventSource(url);
+        submitButton.disabled = true;
+        loadingMessage.hidden = false;
+        messageDiv.hidden = true;
         evtSource.addEventListener("chat", (event) => {
           if (messageDiv.setHTML) {
             // Sanitizes HTML
@@ -18,12 +23,30 @@
             // which as of 2026 includes Safari.
             messageDiv.innerHTML = event.data;
           }
+          loadingMessage.hidden = true;
+          messageDiv.hidden = false;
         });
         evtSource.addEventListener("done", (event) => {
             evtSource.close();
+            submitButton.disabled = false;
         });
     }
 </script>
+<style type="text/css">
+    .spinning-element {
+        display: inline-block;
+        animation: spin 2s linear infinite;
+    }
+
+    @keyframes spin {
+        from {
+            transform: rotate(0deg);
+        }
+        to {
+            transform: rotate(360deg);
+        }
+    }
+</style>
 {% endblock %}
 
 
@@ -41,13 +64,16 @@
             <textarea name="prompt" class="form-control input-block" rows="3"></textarea>
         </div>
         <div>
-            <button type="submit" class="btn btn-primary">Send</button>
+            <button id="submit-chat" type="submit" class="btn btn-primary">Send</button>
         </div>
     </fieldset>
 </form>
 
 <h2>Chat Response</h2>
-<div id="chat-messages">
+<div id="loading-message" hidden>
+    <span class="spinning-element">{{loading_svg}}</span> Loading...
+</div>
+<div id="chat-messages" style="margin-left: 2em;" class="p-responsive border-y border-x">
     Chat response will appear here.
 </div>
 

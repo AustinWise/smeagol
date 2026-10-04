@@ -260,10 +260,11 @@ pub fn render_search_results(
 }
 
 #[derive(Template)]
-#[template(path = "chat.html")]
+#[template(path = "chat.html", escape = "none")]
 struct ChatTemplate<'a> {
     layout: &'a LayoutTemplate<'a>,
     context: &'a str,
+    loading_svg: &'a str,
 }
 
 impl<'a> Deref for ChatTemplate<'a> {
@@ -276,9 +277,11 @@ impl<'a> Deref for ChatTemplate<'a> {
 
 pub fn render_chat(breadcrumbs: Vec<Breadcrumb<'_>>, context: &str) -> askama::Result<String> {
     let layout = LayoutTemplate::new("Chat", "/overview", breadcrumbs);
+    let loading_svg = include_str!("../static/loading.svg");
     let template = ChatTemplate {
         layout: &layout,
         context,
+        loading_svg,
     };
     template.render()
 }
